@@ -42,10 +42,29 @@ function runUnitTests(h, api, meta) {
   h.test('台湾 01 → 台湾省（仅全量版）', () => {
     if (meta.full) h.assert(matched('台湾 01').includes('台湾省'));
   });
+  h.test('常用扩展地区可识别：韩国/英国/德国/加拿大/澳大利亚（仅全量版）', () => {
+    if (!meta.full) return;
+    const cases = [
+      ['首尔 KOR 01', '韩国'],
+      ['London GBR 01', '英国'],
+      ['法兰克福 DEU 01', '德国'],
+      ['Toronto CAN 01', '加拿大'],
+      ['Sydney AUS 01', '澳大利亚'],
+    ];
+    for (const [proxyName, regionName] of cases) {
+      h.assert(matched(proxyName).includes(regionName), `${proxyName} 应匹配 ${regionName}`);
+    }
+  });
   h.test('日本 0.3x 流量 → 低倍率节点 + 日本', () => {
     const n = matched('日本 0.3x 流量');
     h.assert(n.includes('低倍率节点'));
     h.assert(n.includes('日本'));
+  });
+  h.test('低倍率边界：0.50x 命中，0.51x/0.59x 不命中（仅全量版）', () => {
+    if (!meta.full) return;
+    h.assert(matched('日本 0.50x').includes('低倍率节点'));
+    h.assert(!matched('日本 0.51x').includes('低倍率节点'));
+    h.assert(!matched('日本 0.59x').includes('低倍率节点'));
   });
   h.test('香港 2x 速率 → 高倍率节点 + 香港', () => {
     const n = matched('香港 2x 速率');
@@ -236,9 +255,17 @@ function runUnitTests(h, api, meta) {
     h.assert(api.isIpAddress('2001:db8::1'));
     h.assert(api.isIpAddress('::1'));
   });
-  h.test('域名 → false', () => {
+  h.test('域名与畸形 IP → false', () => {
     h.assert(!api.isIpAddress('example.com'));
     h.assert(!api.isIpAddress('hk1.example.com'));
+    if (meta.full) {
+      h.assert(!api.isIpAddress('999.999.999.999'));
+      h.assert(!api.isIpAddress('01.2.3.4'));
+      h.assert(!api.isIpAddress('example.com:443'));
+      h.assert(!api.isIpAddress('2001:::1'));
+      h.assert(!api.isIpAddress('fe80::1%'));
+      h.assert(!api.isIpAddress('fe80::1%eth0%extra'));
+    }
   });
 }
 
