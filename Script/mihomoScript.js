@@ -33,13 +33,13 @@ const ruleOptionsEnable = {
   Steam: true, // Steam游戏平台
   TikTok: true, // TikTok视频平台
   Twitter: true, // Twitter社交平台
-  Instagram: true, // Instagram社交平台
-  Netflix: true, // Netflix视频平台
-  Emby: true, // Emby媒体服务
-  PikPak: true, // PikPak网盘服务
-  Spotify: true, // Spotify音乐服务
-  Crypto: true, // 加密货币相关服务
-  EHentai: true, // E-Hentai网站
+  Instagram: false, // Instagram社交平台
+  Netflix: false, // Netflix视频平台
+  Emby: false, // Emby媒体服务
+  PikPak: false, // PikPak网盘服务
+  Spotify: false, // Spotify音乐服务
+  Crypto: false, // 加密货币相关服务
+  EHentai: false, // E-Hentai网站
   AdBlock: true, // 广告拦截
 
   // 以下为非分流策略配置
