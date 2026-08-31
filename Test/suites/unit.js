@@ -42,18 +42,21 @@ function runUnitTests(h, api, meta) {
   h.test('台湾 01 → 台湾省（仅全量版）', () => {
     if (meta.full) h.assert(matched('台湾 01').includes('台湾省'));
   });
-  h.test('常用扩展地区可识别：韩国/英国/德国/加拿大/澳大利亚（仅全量版）', () => {
+  h.test('常用扩展地区可识别：韩国/英国/德国（仅全量版）', () => {
     if (!meta.full) return;
     const cases = [
       ['首尔 KOR 01', '韩国'],
       ['London GBR 01', '英国'],
       ['法兰克福 DEU 01', '德国'],
-      ['Toronto CAN 01', '加拿大'],
-      ['Sydney AUS 01', '澳大利亚'],
     ];
     for (const [proxyName, regionName] of cases) {
       h.assert(matched(proxyName).includes(regionName), `${proxyName} 应匹配 ${regionName}`);
     }
+  });
+  h.test('加拿大/澳大利亚节点不再匹配独立地区组（仅全量版）', () => {
+    if (!meta.full) return;
+    h.assertEqual(matched('Toronto CAN 01').length, 0);
+    h.assertEqual(matched('Sydney AUS 01').length, 0);
   });
   h.test('日本 0.3x 流量 → 低倍率节点 + 日本', () => {
     const n = matched('日本 0.3x 流量');

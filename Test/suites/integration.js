@@ -78,20 +78,50 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
   h.test('标准化后重名节点去重，保留首个且地区组不重复', () => {
     const cfg = fx.minimalSubscription();
     // 与既有 '🇭🇰 香港 A' 归一化后同名的节点（'香港 A' → '🇭🇰 香港 A'）
-    cfg.proxies.push({
-      name: '香港 A',
-      type: 'ss',
-      server: 'dup.example.com',
-      port: 443,
-      cipher: 'aes-256-gcm',
-      password: 'x',
-    });
+    cfg.proxies.push(
+      {
+        name: '香港 A',
+        type: 'ss',
+        server: 'dup.example.com',
+        port: 443,
+        cipher: 'aes-256-gcm',
+        password: 'x',
+      },
+      {
+        name: '美国 引用重复别名',
+        type: 'ss',
+        server: 'alias-ref.example.com',
+        port: 443,
+        cipher: 'aes-256-gcm',
+        password: 'x',
+        'dialer-proxy': '香港 A',
+      },
+    );
     const out = api.main(cfg);
     const n = proxyNames(out.proxies);
     h.assertEqual(n.filter((x) => x === '🇭🇰 香港 A').length, 1, '同名节点应只保留一个');
     h.assertEqual(out.proxies.find((p) => p.name === '🇭🇰 香港 A').server, 'a.example.com', '应保留首个出现的节点');
+    h.assertEqual(
+      out.proxies.find((p) => p.name === '🇺🇸 美国 引用重复别名')['dialer-proxy'],
+      '🇭🇰 香港 A',
+      '指向被去重别名的引用应更新为保留节点',
+    );
     const hkGroup = groupByName(out['proxy-groups'], '香港');
     h.assertEqual(hkGroup.proxies.filter((x) => x === '🇭🇰 香港 A').length, 1, '地区组内不应出现重复节点');
+  });
+
+  h.test('全量版使用节能 Keep Alive 与推荐的双栈 TUN 配置', () => {
+    if (!meta.full) return;
+    const out = api.main(fx.minimalSubscription());
+    h.assertEqual(out['keep-alive-idle'], 60);
+    h.assertEqual(out['keep-alive-interval'], 60);
+    h.assertEqual(out.tun.stack, 'mixed');
+    h.assert(out.tun['route-exclude-address'].includes('fc00::/7'), 'TUN 应排除 IPv6 ULA 私网');
+    for (const groupName of ['自动选择', '香港-自动选择']) {
+      const group = groupByName(out['proxy-groups'], groupName);
+      h.assertEqual(group.interval, 900, `${groupName} 测速间隔应为 900 秒`);
+      h.assertEqual(group.tolerance, 100, `${groupName} 切换容差应为 100ms`);
+    }
   });
 
   h.test('全量版默认只允许本机访问，可通过开关向可信局域网开放', () => {
@@ -156,6 +186,8 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
         'https://private-cloudflare.example/dns-query',
         'https://cloudflare-private.example/dns-query',
         'https://dns.example/systematic',
+        'system',
+        'system://',
         'https://dns.google/dns-query',
         'https://cloudflare-dns.com/dns-query',
       ],
@@ -165,6 +197,8 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     h.assert(privateDNS.includes('https://private-cloudflare.example/dns-query'));
     h.assert(privateDNS.includes('https://cloudflare-private.example/dns-query'));
     h.assert(privateDNS.includes('https://dns.example/systematic'));
+    h.assert(!privateDNS.includes('system'));
+    h.assert(!privateDNS.includes('system://'));
     h.assert(!privateDNS.includes('https://dns.google/dns-query'));
     h.assert(!privateDNS.includes('https://cloudflare-dns.com/dns-query'));
   });
@@ -486,7 +520,7 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
         'const customizeProxies = [];',
         `const customizeProxies = [
           { name: '香港 01 | 中转', type: 'ss', server: 'custom1.example.com', port: 443, cipher: 'aes-256-gcm', password: 'x' },
-          { name: '自建独享', type: 'vmess', server: 'custom2.example.com', port: 443, uuid: 'x', alterId: 0 },
+          { name: '自建独享', type: 'vmess', server: 'custom2.example.com', port: 443, uuid: 'x', alterId: 0, cipher: 'auto' },
         ];`,
       ),
     );
@@ -526,6 +560,24 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     h.assert(!out.dns['fake-ip-filter'].includes('custom1.example.com'), '自定义节点域名不应进入 fake-ip-filter');
   });
 
+  h.test('自定义节点 dialer-proxy 会修复重命名引用并移除悬空引用', () => {
+    if (!meta.full) return;
+    const customApi = loadScript(scriptFile, (code) =>
+      code.replace(
+        'const customizeProxies = [];',
+        `const customizeProxies = [
+          { name: '引用订阅别名', type: 'ss', server: 'custom-ref.example.com', port: 443, cipher: 'aes-256-gcm', password: 'x', 'dialer-proxy': '香港 A' },
+          { name: '悬空引用', type: 'ss', server: 'custom-missing.example.com', port: 443, cipher: 'aes-256-gcm', password: 'x', 'dialer-proxy': '不存在节点' },
+        ];`,
+      ),
+    );
+    const cfg = fx.minimalSubscription();
+    cfg.proxies[0].name = '香港 A';
+    const out = customApi.main(cfg);
+    h.assertEqual(out.proxies.find((p) => p.name === '引用订阅别名')['dialer-proxy'], '🇭🇰 香港 A');
+    h.assert(!('dialer-proxy' in out.proxies.find((p) => p.name === '悬空引用')), '悬空引用应被移除');
+  });
+
   h.test('订阅节点可通过 dialer-proxy 引用稍后加入的自定义节点', () => {
     if (!meta.full) return;
     const customApi = loadScript(scriptFile, (code) =>
@@ -547,11 +599,11 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
   // 注入自定义节点（首个节点自带 dialer-proxy，用于验证覆盖行为；与订阅节点“香港 01 | 中转”标准化后重名）
   const chainCustomInjection = `const customizeProxies = [
     { name: '香港 01 | 中转', type: 'ss', server: 'custom1.example.com', port: 443, cipher: 'aes-256-gcm', password: 'x', 'dialer-proxy': '旧中转' },
-    { name: '自建独享', type: 'vmess', server: 'custom2.example.com', port: 443, uuid: 'x', alterId: 0 },
+    { name: '自建独享', type: 'vmess', server: 'custom2.example.com', port: 443, uuid: 'x', alterId: 0, cipher: 'auto' },
     { name: '自建-日本-01', type: 'trojan', server: 'custom3.example.com', port: 443, password: 'x' },
   ];`;
 
-  h.test('未启用链式代理：自定义节点保持自建- 前缀且 dialer-proxy 不被修改', () => {
+  h.test('未启用链式代理：自定义节点保持自建- 前缀并校验 dialer-proxy', () => {
     const customApi = loadScript(scriptFile, (code) =>
       code.replace('const customizeProxies = [];', chainCustomInjection),
     );
@@ -559,11 +611,12 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     const n = proxyNames(out.proxies);
     h.assert(n.includes('🇭🇰 自建-香港 01 | 中转'), '重名自定义节点应加自建- 前缀');
     h.assert(n.includes('🇯🇵 自建-日本-01'), '自定义节点名称保持不变');
-    h.assertEqual(
-      out.proxies.find((x) => x.name === '🇭🇰 自建-香港 01 | 中转')['dialer-proxy'],
-      '旧中转',
-      '未启用链式代理时 dialer-proxy 应保持不变',
-    );
+    const customProxy = out.proxies.find((x) => x.name === '🇭🇰 自建-香港 01 | 中转');
+    if (meta.full) {
+      h.assert(!('dialer-proxy' in customProxy), '全量版应移除悬空 dialer-proxy');
+    } else {
+      h.assertEqual(customProxy['dialer-proxy'], '旧中转', '精简版保持原有 dialer-proxy 行为');
+    }
     h.assert(!groupByName(out['proxy-groups'], '链式中转'), '不应生成链式中转组');
   });
 

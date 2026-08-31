@@ -3,6 +3,31 @@
 审查日期：2026-08-29  
 审查对象：`Script/mihomoScript.js`（原始审查版本 1448 行）
 
+## 最新兼容性复核（2026-08-31）
+
+本轮以 Mihomo `v1.19.30` 官方文档和 Bettbox 源码提交
+[`714130a`](https://github.com/appshubcc/Bettbox/tree/714130a3d746d093f6278c0503dac9e2e43fd3e3) 为依据，完成以下调整：
+
+- 将 `Compatible_With_Bettbox` 声明移到脚本首行，严格遵循 Bettbox README 的外置脚本 UI 适配方式；Bettbox 当前实现会在脚本前 2000 个字符内识别该标记。
+- 增加 `keep-alive-idle: 60`，与 `keep-alive-interval: 60` 配套，减少空闲连接过早发送 Keep Alive；两个字段均见 Mihomo 通用配置文档。
+- TUN `stack` 从 `system` 调整为官方优先推荐、Bettbox 当前默认的 `mixed`，同时为启用的 IPv6 增加 ULA 私网 `fc00::/7` 路由排除。
+- 修复标准化去重节点的别名映射：其他节点的 `dialer-proxy` 指向被去重别名时，现会更新到实际保留节点。
+- 修复自定义节点的 `dialer-proxy` 最终校验：同步订阅/自定义节点重命名，并移除悬空引用；链式代理生成的 `链式中转` 引用不受影响。
+- 同步移除加拿大、澳大利亚地区测试元数据和旧断言，并增加“不再生成独立地区匹配”的反向测试。
+- 补全测试 fixture 的 VMess `cipher: auto`，确保代表性生成配置可由当前 Mihomo 内核校验。
+
+依据：
+
+1. [Bettbox README：外置覆写脚本 UI 适配](https://github.com/appshubcc/Bettbox/blob/714130a3d746d093f6278c0503dac9e2e43fd3e3/README.md)
+2. [Bettbox 脚本兼容标记检测](https://github.com/appshubcc/Bettbox/blob/714130a3d746d093f6278c0503dac9e2e43fd3e3/lib/models/common.dart)
+3. [Bettbox TUN 默认值](https://github.com/appshubcc/Bettbox/blob/714130a3d746d093f6278c0503dac9e2e43fd3e3/lib/models/clash_config.dart)
+4. [Mihomo 通用配置：TCP Keep Alive](https://wiki.metacubex.one/en/config/general/#tcp-keep-alive-settings)
+5. [Mihomo TUN：协议栈与路由排除](https://wiki.metacubex.one/en/config/inbound/tun/)
+
+本轮验证：`npm --prefix Test test` 共 200 项通过、0 失败；生成的代表性配置使用官方 Mihomo Meta `v1.19.30` 执行 `mihomo -t` 校验成功；`node --check` 与 `git diff --check` 均通过。
+
+仍保留的设计取舍：`fakeip_filter` 与 `cn_additional` 的 `path-in-bundle` 是 Bettbox 离线 Bundle 降级路径，语义不完全等同在线规则；远程 UI 与规则集仍使用可变版本引用。这两项涉及离线可用性和自动更新策略，本轮不擅自改为固定版本或删除回退。
+
 ## 修复确认（2026-08-29）
 
 已按问题顺序修复并回归验证。用户确认 `172.168.0.0/16` 是有意绕过代理，因此保留，不再视为缺陷。

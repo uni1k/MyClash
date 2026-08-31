@@ -1,3 +1,5 @@
+const Compatible_With_Bettbox = { ruleOptionsEnable: true };
+
 /**
  * mihomo配置覆写脚本（全量版）
  * 作者：AIsouler
@@ -7,9 +9,6 @@
  */
 
 // --- 静态配置区域 ---
-
-// 适配 Bettbox 自定义配置参数
-const Compatible_With_Bettbox = { ruleOptionsEnable: true };
 
 /**
  * 自定义配置选项
@@ -185,18 +184,6 @@ const regionDefinitions = [
     regex: /🇩🇪|德国|法兰克福|柏林|(?<![A-Za-z])(?:DE|DEU)(?![A-Za-z])|germany|deutschland|frankfurt|berlin/i,
     icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Germany.png',
   },
-  {
-    name: '加拿大',
-    flag: '🇨🇦',
-    regex: /🇨🇦|加拿大|多伦多|温哥华|(?<![A-Za-z])(?:CA|CAN)(?![A-Za-z])|canada|toronto|vancouver/i,
-    icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Canada.png',
-  },
-  {
-    name: '澳大利亚',
-    flag: '🇦🇺',
-    regex: /🇦🇺|澳大利亚|澳洲|悉尼|墨尔本|(?<![A-Za-z])(?:AU|AUS)(?![A-Za-z])|australia|sydney|melbourne/i,
-    icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Australia.png',
-  },
 ];
 
 // 定义倍率策略组
@@ -344,7 +331,8 @@ const selectBaseOption = {
 const urlTestBaseOption = {
   ...groupBaseOption,
   type: 'url-test',
-  tolerance: 50,
+  interval: 900,
+  tolerance: 100,
   'exclude-type': 'DIRECT',
   icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Auto.png',
   hidden: true,
@@ -816,7 +804,7 @@ function getIpVersionPreference() {
 /**
  * 过滤并标准化节点：剔除内置/信息节点、按配置过滤、去重、修复 dialer-proxy 引用，空列表时抛错
  */
-function filterAndNormalizeProxies(config) {
+function filterAndNormalizeProxies(config, includeMetadata = false) {
   regionMatchCache.clear();
 
   const filterHighRateProxiesEnabled = ruleOptionsEnable.过滤高倍率节点;
@@ -843,19 +831,23 @@ function filterAndNormalizeProxies(config) {
 
   const renameMap = new Map();
   const normalizedProxies = [];
-  const seenNormalizedNames = new Set();
+  const outputNameByNormalizedName = new Map();
   const usedOutputNames = getReservedOutboundNames();
 
   for (const rawProxy of filteredRawProxies) {
     const normalized = normalizeProxyName(rawProxy);
-    if (seenNormalizedNames.has(normalized.name)) continue;
-    seenNormalizedNames.add(normalized.name);
+    if (outputNameByNormalizedName.has(normalized.name)) {
+      const keptName = outputNameByNormalizedName.get(normalized.name);
+      if (rawProxy.name !== keptName) renameMap.set(rawProxy.name, keptName);
+      continue;
+    }
 
     let name = normalized.name;
     while (usedOutputNames.has(name)) {
       name = addProxyNamePrefix(name, '订阅-');
     }
     usedOutputNames.add(name);
+    outputNameByNormalizedName.set(normalized.name, name);
 
     if (name !== rawProxy.name) {
       renameMap.set(rawProxy.name, name);
@@ -874,13 +866,13 @@ function filterAndNormalizeProxies(config) {
   }
 
   const ipVersionPreference = getIpVersionPreference();
-  if (ipVersionPreference) {
-    return filteredProxies.map((proxy) =>
-      proxy['ip-version'] === ipVersionPreference ? proxy : { ...proxy, 'ip-version': ipVersionPreference },
-    );
-  }
+  const finalProxies = ipVersionPreference
+    ? filteredProxies.map((proxy) =>
+        proxy['ip-version'] === ipVersionPreference ? proxy : { ...proxy, 'ip-version': ipVersionPreference },
+      )
+    : filteredProxies;
 
-  return filteredProxies;
+  return includeMetadata ? { proxies: finalProxies, renameMap } : finalProxies;
 }
 
 // ---构建地区组和倍率组---
@@ -966,7 +958,11 @@ function buildRegionGroups(filteredProxies, customProxies) {
  * 并构建“自建节点”策略组。
  * 自定义节点不参与订阅节点过滤，也不参与 hosts 改写及 DNS 域名处理。
  */
-function buildCustomizeGroups(filteredProxies, customizeList = customizeProxies) {
+function buildCustomizeGroups(
+  filteredProxies,
+  customizeList = customizeProxies,
+  subscriptionRenameMap = new Map(),
+) {
   const chainEnabled = ruleOptionsEnable.链式代理;
 
   if (!customizeList.length) {
@@ -1000,9 +996,14 @@ function buildCustomizeGroups(filteredProxies, customizeList = customizeProxies)
   }
 
   const customProxyNames = customProxies.map((p) => p.name);
-  const allProxyNames = new Set([...filteredProxies.map((p) => p.name), ...customProxyNames]);
+  const allProxyNames = new Set([
+    ...filteredProxies.map((p) => p.name),
+    ...customProxyNames,
+    ...(chainEnabled ? [dialerProxyName] : []),
+  ]);
+  const allRenameMap = new Map([...subscriptionRenameMap, ...customRenameMap]);
   const validatedCustomProxies = customProxies.map((proxy) =>
-    fixDialerProxy(proxy, customRenameMap, allProxyNames, false),
+    fixDialerProxy(proxy, allRenameMap, allProxyNames),
   );
 
   const customGroup = {
@@ -1254,7 +1255,7 @@ function getDnsEndpointHost(dns) {
  */
 function isCommonDns(dns) {
   const host = getDnsEndpointHost(dns);
-  if (host === 'system') return true;
+  if (host === 'system' || host === 'system://') return true;
 
   const labels = host.split('.');
   if (commonDnsDomainList.some((domain) => host === domain || host.endsWith(`.${domain}`))) {
@@ -1560,9 +1561,17 @@ function buildDnsAndHostsConfig(config, filteredProxies) {
 function main(config) {
   const newConfig = {};
 
-  let filteredProxies = filterAndNormalizeProxies(config);
+  const { proxies: initialFilteredProxies, renameMap: subscriptionRenameMap } = filterAndNormalizeProxies(
+    config,
+    true,
+  );
+  let filteredProxies = initialFilteredProxies;
 
-  const { customProxies, customProxyNames, customGroup, customRenameMap } = buildCustomizeGroups(filteredProxies);
+  const { customProxies, customProxyNames, customGroup, customRenameMap } = buildCustomizeGroups(
+    filteredProxies,
+    customizeProxies,
+    subscriptionRenameMap,
+  );
   const finalProxyNames = new Set([...filteredProxies.map((p) => p.name), ...customProxyNames]);
   filteredProxies = filteredProxies.map((proxy) => fixDialerProxy(proxy, customRenameMap, finalProxyNames));
 
@@ -1584,6 +1593,7 @@ function main(config) {
   newConfig['bind-address'] = allowLan ? '*' : '127.0.0.1';
   newConfig['unified-delay'] = true;
   newConfig['tcp-concurrent'] = true;
+  newConfig['keep-alive-idle'] = 60;
   newConfig['keep-alive-interval'] = 60;
   newConfig['find-process-mode'] = 'strict';
 
@@ -1606,13 +1616,19 @@ function main(config) {
 
   newConfig['tun'] = {
     enable: true,
-    stack: 'system',
+    stack: 'mixed',
     'auto-route': true,
     'strict-route': true,
     'auto-redirect': true,
     'auto-detect-interface': true,
     'dns-hijack': ['any:53', 'tcp://any:53'],
-    'route-exclude-address': ['10.0.0.0/8', '172.16.0.0/12', '172.168.0.0/16', '192.168.0.0/16'],
+    'route-exclude-address': [
+      '10.0.0.0/8',
+      '172.16.0.0/12',
+      '172.168.0.0/16', // 用户指定的额外直连网段（非 RFC1918 私网）
+      '192.168.0.0/16',
+      'fc00::/7',
+    ],
   };
 
   newConfig['proxies'] = [...customProxies, ...mappedProxies, ...directProxies];
