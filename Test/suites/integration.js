@@ -110,6 +110,36 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     h.assertEqual(hkGroup.proxies.filter((x) => x === '🇭🇰 香港 A').length, 1, '地区组内不应出现重复节点');
   });
 
+  h.test('全量版不生成英国/德国分组，相关节点归入其他节点', () => {
+    if (!meta.full) return;
+    const cfg = fx.minimalSubscription();
+    cfg.proxies.push(
+      {
+        name: 'London GBR 01',
+        type: 'ss',
+        server: 'uk.example.com',
+        port: 443,
+        cipher: 'aes-256-gcm',
+        password: 'x',
+      },
+      {
+        name: '法兰克福 DEU 01',
+        type: 'ss',
+        server: 'de.example.com',
+        port: 443,
+        cipher: 'aes-256-gcm',
+        password: 'x',
+      },
+    );
+    const out = api.main(cfg);
+    for (const removedGroup of ['英国', '英国-自动选择', '德国', '德国-自动选择']) {
+      h.assert(!groupByName(out['proxy-groups'], removedGroup), `不应生成 ${removedGroup} 分组`);
+    }
+    const otherGroup = groupByName(out['proxy-groups'], '其他节点');
+    h.assert(otherGroup.proxies.includes('London GBR 01'));
+    h.assert(otherGroup.proxies.includes('法兰克福 DEU 01'));
+  });
+
   h.test('全量版使用节能 Keep Alive 与推荐的双栈 TUN 配置', () => {
     if (!meta.full) return;
     const out = api.main(fx.minimalSubscription());

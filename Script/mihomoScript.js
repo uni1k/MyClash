@@ -172,18 +172,6 @@ const regionDefinitions = [
     regex: /🇰🇷|韩国|南韩|首尔|釜山|(?<![A-Za-z])(?:KR|KOR)(?![A-Za-z])|south\s*korea|korea/i,
     icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Korea.png',
   },
-  {
-    name: '英国',
-    flag: '🇬🇧',
-    regex: /🇬🇧|英国|英格兰|伦敦|(?<![A-Za-z])(?:UK|GB|GBR)(?![A-Za-z])|united\s*kingdom|britain|england|london/i,
-    icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/United_Kingdom.png',
-  },
-  {
-    name: '德国',
-    flag: '🇩🇪',
-    regex: /🇩🇪|德国|法兰克福|柏林|(?<![A-Za-z])(?:DE|DEU)(?![A-Za-z])|germany|deutschland|frankfurt|berlin/i,
-    icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Germany.png',
-  },
 ];
 
 // 定义倍率策略组
