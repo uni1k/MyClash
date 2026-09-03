@@ -154,13 +154,13 @@ const highRateRegionName = '高倍率节点';
 const rateRegionDefinitions = [
   {
     name: lowRateRegionName,
-    regex: /^(?!.*(?:剩|期|客户端|软件)).*(?:(?<!\d)0\.[0-5]|下载|低倍)/,
+    regex:
+      /^(?:(?!.*(?:剩|期)).*(?:(?<!\d)0\.[0-5]|0[*×x])|(?!.*(?:客户端|软件)).*下载|.*(低倍|免费)|.*(?:(?<![A-Za-z])free(?![A-Za-z])))/i,
     icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Available_1.png',
   },
   {
     name: highRateRegionName,
-    regex:
-      /(?:[*×xX✕✖⨉]\s*(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?\s*(?:倍|[*×xX✕✖⨉]))/u,
+    regex: /(?:[*×x]\s*(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?\s*(?:倍|[*×x]))/i,
     icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Airport.png',
   },
 ];
@@ -248,9 +248,9 @@ const baseRuleProviders = {
 
   fakeip_filter: {
     ...ruleProviderCommonDomain,
-    url: 'https://fastly.jsdelivr.net/gh/wwqgtxx/clash-rules@release/fakeip-filter.mrs',
+    url: 'https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/fakeip-filter.mrs',
     path: './ruleset/fakeip-filter.mrs',
-    'path-in-bundle': 'geo/geosite/private.mrs',
+    'path-in-bundle': 'geo/geosite/fakeip-filter.mrs',
   },
   cn_additional: {
     ...ruleProviderCommonDomain,
@@ -270,7 +270,7 @@ const baseRuleProviders = {
 const groupBaseOption = {
   interval: 600,
   timeout: 3000,
-  url: 'https://g.cn/generate_204',
+  url: 'https://www.apple.com/library/test/success.html',
   lazy: true,
   'max-failed-times': 3,
   'empty-fallback': 'REJECT',
@@ -768,7 +768,6 @@ function buildFunctionalGroups(filteredProxies, generatedRegionGroups, customize
     ...selectBaseOption,
     name: '直连',
     proxies: [...directProxies.map((p) => p.name)],
-    url: 'https://connectivitycheck.platform.hicloud.com/generate_204',
     icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/China_Map.png',
     hidden: hideManualSelectGroupEnabled,
   };

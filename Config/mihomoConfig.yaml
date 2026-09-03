@@ -13,7 +13,7 @@ proxy_providers_common:
     interval: 86400,
     proxy: DIRECT,
     exclude-type: 'direct|reject|rematch',
-    health-check: { enable: true, url: https://g.cn/generate_204, interval: 600, lazy: true },
+    health-check: { enable: true, url: https://www.apple.com/library/test/success.html, interval: 600, lazy: true },
   }
 
 # 全局过滤节点
@@ -314,9 +314,9 @@ rule-providers:
     path-in-bundle: 'geo/geosite/category-ads-all.mrs'
   fakeip_filter:
     <<: *rule_providers_domain
-    url: 'https://fastly.jsdelivr.net/gh/wwqgtxx/clash-rules@release/fakeip-filter.mrs'
+    url: 'https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/fakeip-filter.mrs'
     path: './ruleset/fakeip-filter.mrs'
-    path-in-bundle: 'geo/geosite/private.mrs'
+    path-in-bundle: 'geo/geosite/fakeip-filter.mrs'
   cn_additional:
     <<: *rule_providers_domain
     url: 'https://static-file-global.353355.xyz/rules/cn-additional-list.mrs'
@@ -339,7 +339,7 @@ group_common:
       timeout: 3000,
       max-failed-times: 3,
       empty-fallback: REJECT,
-      url: 'https://g.cn/generate_204',
+      url: 'https://www.apple.com/library/test/success.html',
       lazy: true,
     }
 
@@ -350,7 +350,7 @@ group_common:
       timeout: 3000,
       max-failed-times: 3,
       empty-fallback: REJECT,
-      url: 'https://g.cn/generate_204',
+      url: 'https://www.apple.com/library/test/success.html',
       lazy: true,
       tolerance: 50,
       include-all: true,
@@ -366,7 +366,7 @@ group_common:
       timeout: 3000,
       max-failed-times: 3,
       empty-fallback: REJECT,
-      url: 'https://g.cn/generate_204',
+      url: 'https://www.apple.com/library/test/success.html',
       lazy: true,
       strategy: 'sticky-sessions',
       include-all: true,
@@ -428,10 +428,13 @@ group_filter:
     }
   SG_filter: &SG_filter { filter: '(?i)(🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore)' }
   TW_filter: &TW_filter { filter: '(?i)(🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan)' }
-  low_filter: &low_filter { filter: '^(?!.*(?:剩|期|客户端|软件)).*(?:(?<!\d)0\.[0-5]|下载|低倍)' }
+  low_filter:
+    &low_filter {
+      filter: '(?i)(^(?:(?!.*(?:剩|期)).*(?:(?<!\d)0\.[0-5]|0[*×x])|(?!.*(?:客户端|软件)).*下载|.*(低倍|免费)|.*(?:(?<![A-Za-z])free(?![A-Za-z]))))',
+    }
   high_filter:
     &high_filter {
-      filter: '(?u)(?:[*×xX✕✖⨉]\s*(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?\s*(?:倍|[*×xX✕✖⨉]))',
+      filter: '(?i)(?:[*×x]\s*(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?\s*(?:倍|[*×x]))',
     }
   exclude_filter:
     &exclude_filter {
@@ -556,7 +559,6 @@ proxy-groups:
   - name: '直连'
     <<: *group_common_select
     proxies: ['🇨🇳 直连 | 双栈', '🇨🇳 直连 | IPv4优先', '🇨🇳 直连 | IPv6优先', '🇨🇳 直连 | 仅IPv4', '🇨🇳 直连 | 仅IPv6']
-    url: 'https://connectivitycheck.platform.hicloud.com/generate_204'
     icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/China_Map.png'
 
   # 定义地区策略组
