@@ -136,7 +136,7 @@ const directProxies = [
 ];
 
 // 图标 URL 公共前缀
-const iconBaseUrl = 'https://cdn.jsdmirror.com/gh/AIsouler/MyClash@main/Icons/svg/';
+const iconBaseUrl = 'https://cdn.jsdmirror.com/gh/uni1k/MyClash@main/Icons/svg/';
 
 // 规则集 URL 公共前缀
 const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/geo/';
@@ -178,7 +178,7 @@ const regionDefinitions = [
     name: '韩国',
     flag: '🇰🇷',
     regex: /🇰🇷|韩国|南韩|首尔|釜山|(?<![A-Za-z])(?:KR|KOR)(?![A-Za-z])|south\s*korea|korea/i,
-    icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Korea.png',
+    icon: `${iconBaseUrl}Korea.svg`,
   },
 ];
 
