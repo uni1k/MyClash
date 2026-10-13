@@ -2,23 +2,9 @@
 
 /**
  * 纯函数单元测试，两个脚本共用。
- * 覆盖：matchDomainPattern / getMatchedRegions / normalizeProxyName / fixDialerProxy
+ * 覆盖：matchDomainPattern / getMatchedRegions / normalizeProxyName / fixDialerProxy / buildCustomizeGroups
  */
 function runUnitTests(h, api, meta) {
-  /** 临时修改 ruleOptionsEnable 的若干选项，执行完成后恢复，避免污染后续用例 */
-  const withUnitOptions = (patch, fn) => {
-    const saved = {};
-    for (const key of Object.keys(patch)) {
-      saved[key] = api.ruleOptionsEnable[key];
-      api.ruleOptionsEnable[key] = patch[key];
-    }
-    try {
-      return fn();
-    } finally {
-      for (const key of Object.keys(patch)) api.ruleOptionsEnable[key] = saved[key];
-    }
-  };
-
   h.section('单元测试 · matchDomainPattern（域名规则匹配）');
   const d = new Set(['example.com', 'sub.example.com', 'a.b.example.com', 'other.org']);
   h.test('精确匹配命中', () => h.assert(api.matchDomainPattern('example.com', d)));
@@ -39,8 +25,8 @@ function runUnitTests(h, api, meta) {
   h.test('JAPAN-02 → 日本', () => h.assert(matched('JAPAN-02').includes('日本')));
   h.test('US-LosAngeles-02 → 美国', () => h.assert(matched('US-LosAngeles-02').includes('美国')));
   h.test('SG 01 | 新加坡 → 新加坡', () => h.assert(matched('SG 01 | 新加坡').includes('新加坡')));
-  h.test('台湾 01 → 台湾省（仅全量版）', () => {
-    if (meta.full) h.assert(matched('台湾 01').includes('台湾省'));
+  h.test('台湾 01 → 台湾（仅全量版）', () => {
+    if (meta.full) h.assert(matched('台湾 01').includes('台湾'));
   });
   h.test('常用扩展地区可识别：韩国（仅全量版）', () => {
     if (meta.full) h.assert(matched('首尔 KOR 01').includes('韩国'));
@@ -56,11 +42,11 @@ function runUnitTests(h, api, meta) {
     h.assert(n.includes('低倍率节点'));
     h.assert(n.includes('日本'));
   });
-  h.test('低倍率边界：0.50x 命中，0.51x/0.59x 不命中（仅全量版）', () => {
+  h.test('低倍率边界：0.50x~0.59x 均命中（上游 0.[0-5] 规则，仅全量版）', () => {
     if (!meta.full) return;
     h.assert(matched('日本 0.50x').includes('低倍率节点'));
-    h.assert(!matched('日本 0.51x').includes('低倍率节点'));
-    h.assert(!matched('日本 0.59x').includes('低倍率节点'));
+    h.assert(matched('日本 0.51x').includes('低倍率节点'));
+    h.assert(matched('日本 0.59x').includes('低倍率节点'));
   });
   h.test('香港 2x 速率 → 高倍率节点 + 香港', () => {
     const n = matched('香港 2x 速率');
@@ -113,32 +99,6 @@ function runUnitTests(h, api, meta) {
     );
     h.assertDeep(r.customProxyNames, ['🇭🇰 自建-自建-香港 01']);
   });
-
-  h.section('单元测试 · buildCustomizeGroups（链式代理）');
-  h.test('链式代理启用：强制添加 dialer-proxy（已有值被覆盖）', () =>
-    withUnitOptions({ 链式代理: true }, () => {
-      for (const proxies of [custom('自建独享'), [{ ...mkCustomProxy('自建独享'), 'dialer-proxy': '旧中转' }]]) {
-        const r = api.buildCustomizeGroups([], proxies);
-        h.assertEqual(r.customProxies[0]['dialer-proxy'], '链式中转');
-      }
-    }),
-  );
-  h.test('链式代理启用：策略组名改为“链式落地”，节点名称保持不变', () =>
-    withUnitOptions({ 链式代理: true }, () => {
-      const r = api.buildCustomizeGroups([], custom('自建-日本-01'));
-      h.assertEqual(r.customGroup.name, '链式落地');
-      h.assertDeep(r.customProxyNames, ['🇯🇵 自建-日本-01']);
-    }),
-  );
-  h.test('未启用链式代理：不添加 dialer-proxy', () => {
-    const r = api.buildCustomizeGroups([], custom('自建独享'));
-    h.assert(!('dialer-proxy' in r.customProxies[0]), '未启用链式代理时不应添加 dialer-proxy');
-  });
-  h.test('链式代理启用但未配置自定义节点 → 抛错', () =>
-    withUnitOptions({ 链式代理: true }, () =>
-      h.assertThrows(() => api.buildCustomizeGroups([], []), /启用失败，请在脚本中添加自定义节点后尝试/),
-    ),
-  );
 
   h.section('单元测试 · fixDialerProxy（dialer-proxy 引用修复）');
   const renameMap = new Map([['旧名', '新名']]);
@@ -226,19 +186,53 @@ function runUnitTests(h, api, meta) {
   h.test('非 direct 开头后缀 → 剥离', () =>
     h.assertEqual(api.stripDnsSuffix('https://dns.example.com/dns-query#proxy'), 'https://dns.example.com/dns-query'),
   );
-  h.test('#direct 后缀 → 整条保留（忽略大小写、含附加参数）', () => {
+  h.test('#direct/直连 后缀 → 规范化为 #DIRECT（忽略大小写、含附加参数）', () => {
     for (const url of [
       'https://dns.example.com/dns-query#direct',
       'https://dns.example.com/dns-query#DIRECT',
       'https://dns.example.com/dns-query#direct&ecs=2.2.2.2',
+      'https://dns.example.com/dns-query#直连',
     ]) {
-      h.assertEqual(api.stripDnsSuffix(url), url);
+      h.assertEqual(api.stripDnsSuffix(url), 'https://dns.example.com/dns-query#DIRECT');
     }
   });
-  h.test('#directxxx 后缀 → 剥离（词边界）', () =>
+  h.test('包含 direct 的后缀 → 规范化为 #DIRECT', () =>
     h.assertEqual(
       api.stripDnsSuffix('https://dns.example.com/dns-query#directxxx'),
-      'https://dns.example.com/dns-query',
+      'https://dns.example.com/dns-query#DIRECT',
+    ),
+  );
+
+  h.section('单元测试 · simplifyDomainPolicy（节点域名 DNS 策略压缩）');
+  h.test('相同 DNS 的同一后缀子域 → 合并为 +. 后缀规则', () =>
+    h.assertDeep(
+      api.simplifyDomainPolicy({
+        'a.example.com': ['https://dns.example/dns-query'],
+        'b.example.com': ['https://dns.example/dns-query'],
+      }),
+      { '+.example.com': ['https://dns.example/dns-query'] },
+    ),
+  );
+  h.test('DNS 不同或只有一个子域 → 保留精确规则', () =>
+    h.assertDeep(
+      api.simplifyDomainPolicy({
+        'a.example.com': 'https://dns-a.example/dns-query',
+        'b.example.com': 'https://dns-b.example/dns-query',
+        'only.other.com': 'https://dns.example/dns-query',
+      }),
+      {
+        'a.example.com': 'https://dns-a.example/dns-query',
+        'b.example.com': 'https://dns-b.example/dns-query',
+        'only.other.com': 'https://dns.example/dns-query',
+      },
+    ),
+  );
+  h.test('两段域名策略 → 原样保留，不能在压缩时丢失', () =>
+    h.assertDeep(
+      api.simplifyDomainPolicy({
+        'example.com': 'https://dns.example/dns-query',
+      }),
+      { 'example.com': 'https://dns.example/dns-query' },
     ),
   );
 

@@ -34,15 +34,7 @@ function typicalSubscription() {
     },
     proxies: [
       // --- 香港 ---
-      {
-        name: '🇭🇰 香港 01 | 中转',
-        type: 'vmess',
-        server: 'hk1.example.com',
-        port: 443,
-        uuid: 'x',
-        alterId: 0,
-        cipher: 'auto',
-      },
+      { name: '🇭🇰 香港 01 | 中转', type: 'vmess', server: 'hk1.example.com', port: 443, uuid: 'x', alterId: 0 },
       { name: 'HK 02 - 香港', type: 'trojan', server: '1.2.3.4', port: 443, password: 'x' },
       { name: 'hongkong-03', type: 'ss', server: 'hk3.example.com', port: 8388, cipher: 'aes-256-gcm', password: 'x' },
       // --- 日本 ---
@@ -54,7 +46,7 @@ function typicalSubscription() {
         cipher: 'aes-128-gcm',
         password: 'x',
       },
-      { name: 'JAPAN-02', type: 'vmess', server: '1.2.3.5', port: 443, uuid: 'y', alterId: 0, cipher: 'auto' },
+      { name: 'JAPAN-02', type: 'vmess', server: '1.2.3.5', port: 443, uuid: 'y', alterId: 0 },
       // --- 美国 ---
       {
         name: '🇺🇸 美国 01 | 解锁',
@@ -74,16 +66,8 @@ function typicalSubscription() {
         cipher: 'aes-256-gcm',
         password: 'x',
       },
-      // --- 台湾省（全量版地区）---
-      {
-        name: '🇹🇼 台湾 01',
-        type: 'vmess',
-        server: 'tw1.example.com',
-        port: 443,
-        uuid: 'z',
-        alterId: 0,
-        cipher: 'auto',
-      },
+      // --- 台湾（全量版地区）---
+      { name: '🇹🇼 台湾 01', type: 'vmess', server: 'tw1.example.com', port: 443, uuid: 'z', alterId: 0 },
       // --- 低倍率节点 ---
       { name: '日本 0.3x 流量', type: 'ss', server: '1.2.3.7', port: 443, cipher: 'aes-256-gcm', password: 'x' },
       { name: '0.5倍 香港', type: 'ss', server: '1.2.3.8', port: 443, cipher: 'aes-256-gcm', password: 'x' },
@@ -149,7 +133,7 @@ function minimalSubscription() {
     proxies: [
       { name: '🇭🇰 香港 A', type: 'ss', server: 'a.example.com', port: 443, cipher: 'aes-256-gcm', password: 'x' },
       { name: '日本 B', type: 'ss', server: 'b.example.com', port: 443, cipher: 'aes-256-gcm', password: 'x' },
-      { name: '美国 C', type: 'vmess', server: 'c.example.com', port: 443, uuid: 'x', alterId: 0, cipher: 'auto' },
+      { name: '美国 C', type: 'vmess', server: 'c.example.com', port: 443, uuid: 'x', alterId: 0 },
       { name: '日本 2x 高倍率', type: 'ss', server: 'd.example.com', port: 443, cipher: 'aes-256-gcm', password: 'x' },
       { name: '官网公告', type: 'ss', server: 'e.example.com', port: 443, cipher: 'aes-256-gcm', password: 'x' },
     ],
@@ -193,7 +177,6 @@ function hostsMappedSubscription() {
         port: 443,
         uuid: 'x',
         alterId: 0,
-        cipher: 'auto',
       },
     ],
   };
