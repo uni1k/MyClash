@@ -345,10 +345,29 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     h.assertDeep(out.dns['default-nameserver'], api.defaultDNS);
     h.assertDeep(out.dns['proxy-server-nameserver'], api.proxyServerDNS);
     h.assert(!('proxy-server-nameserver-policy' in out.dns), '无私有 DNS 时不应生成 policy');
-    h.assertDeep(out.hosts['doh.pub'], ['1.12.12.12', '120.53.53.53']);
+    h.assert(!('doh.pub' in out.hosts), 'DNSPod 域名不应固定到旧 IP');
     // 默认 hosts 仍生成（不再包含已移除的 dns.alidns.com/dns.google 等条目）
     h.assertEqual(out.hosts['services.googleapis.cn'], 'services.googleapis.com');
   });
+
+  h.test('DNS 引导解析使用 IP DoH，节点解析使用域名 DoH且不固定 DNSPod IP', () => {
+    const out = api.main(fx.typicalSubscription());
+    h.assertDeep(out.dns['default-nameserver'], ['https://223.5.5.5/dns-query#DIRECT', 'https://223.6.6.6/dns-query#DIRECT']);
+    h.assertDeep(out.dns['proxy-server-nameserver'], [
+      'https://dns.alidns.com/dns-query#DIRECT',
+      'https://doh.pub/dns-query#DIRECT',
+    ]);
+    h.assert(!('doh.pub' in out.hosts), '应让 DNSPod 域名正常解析');
+  });
+  if (meta.full) {
+    h.test('FCM 默认通过代理访问，并保留直连选项', () => {
+      const out = api.main(fx.typicalSubscription());
+      const fcm = groupByName(out['proxy-groups'], 'FCM');
+      h.assertEqual(fcm['default-selected'], '默认代理');
+      h.assert(fcm.proxies.includes('默认代理'), '默认策略必须存在于组中');
+      h.assert(fcm.proxies.includes('直连'), '保留手动直连选项');
+    });
+  }
 
   // ---------------- 配置选项切换 ----------------
   h.section('集成测试 · 配置选项切换');
