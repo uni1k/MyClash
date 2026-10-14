@@ -359,6 +359,16 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     ]);
     h.assert(!('doh.pub' in out.hosts), '应让 DNSPod 域名正常解析');
   });
+  h.test('国内与直连公共解析使用 DoH，关闭 DNS IPv6并保留私有解析例外', () => {
+    const out = api.main(fx.typicalSubscription());
+    const domesticDNS = ['https://dns.alidns.com/dns-query#DIRECT', 'https://doh.pub/dns-query#DIRECT'];
+    h.assertDeep(out.dns['nameserver-policy']['rule-set:cn'], domesticDNS);
+    h.assertDeep(out.dns['direct-nameserver'], domesticDNS);
+    h.assertEqual(out.dns['direct-nameserver-follow-policy'], true);
+    h.assertEqual(out.dns.ipv6, false);
+    h.assertEqual(out.dns['nameserver-policy']['rule-set:private'], 'system');
+    h.assertDeep(out.dns['nameserver-policy']['rule-set:douyin'], ['system', '180.184.1.1', '180.184.2.2']);
+  });
   if (meta.full) {
     h.test('FCM 默认通过代理访问，并保留直连选项', () => {
       const out = api.main(fx.typicalSubscription());
@@ -371,6 +381,40 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
 
   // ---------------- 配置选项切换 ----------------
   h.section('集成测试 · 配置选项切换');
+  h.test('默认不生成倍率组或负载均衡组，所有策略组引用有效', () => {
+    h.assertEqual(api.ruleOptionsEnable.生成倍率组, false);
+    if (meta.full) h.assertEqual(api.ruleOptionsEnable.负载均衡, false);
+    const out = api.main(fx.typicalSubscription());
+    const groups = out['proxy-groups'];
+    h.assert(!groups.some((g) => /^(低倍率节点|高倍率节点)/.test(g.name)), '默认不应生成倍率组');
+    h.assert(!groupByName(groups, '负载均衡'), '默认不应生成负载均衡组');
+    const available = new Set([...proxyNames(out.proxies), ...groups.map((g) => g.name), 'DIRECT', 'REJECT', 'REJECT-DROP', 'PASS']);
+    for (const group of groups) {
+      for (const name of group.proxies || []) h.assert(available.has(name), `${group.name} 引用了不存在的 ${name}`);
+    }
+  });
+  h.test('可重新开启倍率组，并将倍率节点加入对应分组', () =>
+    withOptions(api, { 生成倍率组: true }, () => {
+      const out = api.main(fx.typicalSubscription());
+      const low = groupByName(out['proxy-groups'], '低倍率节点');
+      const high = groupByName(out['proxy-groups'], '高倍率节点');
+      h.assert(low && high, '重新开启后应生成高低倍率组');
+      h.assert(low.proxies.some((name) => name.includes('0.3x')), '低倍率组应包含低倍率节点');
+      h.assert(high.proxies.some((name) => name.includes('2x 速率')), '高倍率组应包含高倍率节点');
+    }),
+  );
+  if (meta.full) {
+    h.test('可重新开启负载均衡，并加入默认代理可选项', () =>
+      withOptions(api, { 负载均衡: true }, () => {
+        const out = api.main(fx.typicalSubscription());
+        const balance = groupByName(out['proxy-groups'], '负载均衡');
+        h.assert(balance, '重新开启后应生成负载均衡组');
+        h.assertEqual(balance.type, 'load-balance');
+        h.assertEqual(balance.strategy, 'sticky-sessions');
+        h.assert(groupByName(out['proxy-groups'], '默认代理').proxies.includes('负载均衡'));
+      }),
+    );
+  }
   h.test('极简模式仅保留基础策略组且 MATCH 走默认代理', () =>
     withOptions(api, { 极简模式: true }, () => {
       const out = api.main(fx.typicalSubscription());

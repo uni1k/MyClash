@@ -19,7 +19,7 @@ const ruleOptionsEnable = {
   // 基础策略组
   手动选择: true, // 是否启用手动选择策略组
   自动选择: true, // 是否启用自动选择策略组
-  负载均衡: true, // 是否启用负载均衡策略组
+  负载均衡: false, // 是否启用负载均衡策略组
 
   // 以下为分流策略配置
   FCM: true, // GoogleFCM服务
@@ -48,7 +48,7 @@ const ruleOptionsEnable = {
   极简模式: false, // 是否启用极简模式
   生成地区自动选择组: true, // 是否生成地区自动选择策略组
   隐藏地区手动选择组: false, // 是否隐藏地区手动选择策略组
-  生成倍率组: true, // 是否生成低倍率/高倍率策略组
+  生成倍率组: false, // 是否生成低倍率/高倍率策略组
   分流组添加所有节点: false, // 是否为分流策略组添加所有节点
   过滤低倍率节点: false, // 是否过滤低倍率节点
   过滤高倍率节点: false, // 是否过滤高倍率节点
@@ -1305,7 +1305,7 @@ function isCommonDns(dns) {
 }
 
 // 国内外 DNS 定义
-const chinaDNS = ['223.5.5.5#DIRECT', '119.29.29.29#DIRECT'];
+const chinaDNS = ['https://dns.alidns.com/dns-query#DIRECT', 'https://doh.pub/dns-query#DIRECT'];
 const foreignDNS = ['https://cloudflare-dns.com/dns-query#默认代理', 'https://dns.google/dns-query#默认代理'];
 // 使用 IP DoH 加密引导查询，避免解析 DNS 服务域名时依赖明文 DNS；保留证书验证。
 const defaultDNS = ['https://223.5.5.5/dns-query#DIRECT', 'https://223.6.6.6/dns-query#DIRECT'];
@@ -1597,7 +1597,7 @@ function buildDnsAndHostsConfig(config, filteredProxies) {
 
   const dns = {
     enable: true,
-    ipv6: true,
+    ipv6: false,
     'use-hosts': true,
     'cache-algorithm': 'arc',
     'use-system-hosts': true,
