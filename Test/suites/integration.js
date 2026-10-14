@@ -350,11 +350,11 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     h.assertEqual(out.hosts['services.googleapis.cn'], 'services.googleapis.com');
   });
 
-  h.test('DNS 引导解析使用 IP DoH，节点解析使用域名 DoH且不固定 DNSPod IP', () => {
+  h.test('DNS 引导解析使用 IP DoH，节点解析使用阿里 DoQ 与腾讯 DoH且不固定 DNSPod IP', () => {
     const out = api.main(fx.typicalSubscription());
     h.assertDeep(out.dns['default-nameserver'], ['https://223.5.5.5/dns-query#DIRECT', 'https://223.6.6.6/dns-query#DIRECT']);
     h.assertDeep(out.dns['proxy-server-nameserver'], [
-      'https://dns.alidns.com/dns-query#DIRECT',
+      'quic://dns.alidns.com:853#DIRECT',
       'https://doh.pub/dns-query#DIRECT',
     ]);
     h.assert(!('doh.pub' in out.hosts), '应让 DNSPod 域名正常解析');

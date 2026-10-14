@@ -1309,7 +1309,7 @@ const chinaDNS = ['223.5.5.5#DIRECT', '119.29.29.29#DIRECT'];
 const foreignDNS = ['https://cloudflare-dns.com/dns-query#默认代理', 'https://dns.google/dns-query#默认代理'];
 // 使用 IP DoH 加密引导查询，避免解析 DNS 服务域名时依赖明文 DNS；保留证书验证。
 const defaultDNS = ['https://223.5.5.5/dns-query#DIRECT', 'https://223.6.6.6/dns-query#DIRECT'];
-const proxyServerDNS = ['https://dns.alidns.com/dns-query#DIRECT', 'https://doh.pub/dns-query#DIRECT'];
+const proxyServerDNS = ['quic://dns.alidns.com:853#DIRECT', 'https://doh.pub/dns-query#DIRECT'];
 
 /**
  * hosts 匹配优先级：精确 > +. > . > *（同级按出现顺序）

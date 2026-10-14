@@ -53,7 +53,7 @@ npm --prefix Test install
 
 - 节点过滤（DIRECT/REJECT/rematch/信息节点）、标准化补国旗、dialer-proxy 修复
 - GLOBAL 策略组聚合所有策略组
-- DNS 与 hosts（`default-nameserver` 与 `proxy-server-nameserver` 分别使用加密 IP DoH 与域名 DoH（引导查询不添加明文兜底，不关闭证书验证）；私有 DNS 在无节点专属 policy 时合并写入节点域名 policy、有专属 policy 时优先保留、公共 DNS 过滤；节点域名 policy/fake-ip-filter 保留（节点域名仅取映射后的 server 且排除 IP 类型）、DNSPod 域名不固定到旧 IP、默认 hosts 映射，以及 hosts 映射改写 server；仅当 `proxy-server-nameserver` 有且仅有一个条目且包含 `listen` 值，或条目含 `127.0.0.1` 且 `listen` 含 `0.0.0.0` 时才触发改写，未命中时跳过改写）
+- DNS 与 hosts（`default-nameserver` 与 `proxy-server-nameserver` 分别使用加密 IP DoH 与阿里 DoQ / 腾讯 DoH（引导查询不添加明文兜底，不关闭证书验证）；私有 DNS 在无节点专属 policy 时合并写入节点域名 policy、有专属 policy 时优先保留、公共 DNS 过滤；节点域名 policy/fake-ip-filter 保留（节点域名仅取映射后的 server 且排除 IP 类型）、DNSPod 域名不固定到旧 IP、默认 hosts 映射，以及 hosts 映射改写 server；仅当 `proxy-server-nameserver` 有且仅有一个条目且包含 `listen` 值，或条目含 `127.0.0.1` 且 `listen` 含 `0.0.0.0` 时才触发改写，未命中时跳过改写）
 - 全量版 FCM 默认通过“默认代理”访问，同时保留手动直连选项
 - 配置选项开关（过滤高倍率 / 自动选择组 / 隐藏手动组 / 分流组添加所有节点 / QUIC 及 cn_additional 规则集 / 关闭分流组）
 - 自定义节点：未配置时不生成自定义节点组；配置后生成“自建节点”组、重名加“自建-”前缀、不参与 hosts 改写与 DNS 域名处理、默认代理/GLOBAL/手动选择包含自定义节点
