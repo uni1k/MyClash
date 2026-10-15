@@ -131,7 +131,7 @@ const intranetGroup = { name: '内网', type: 'select', proxies: ['内网-aTrust
 // 内网分流规则，须置于 prefixRules 之前，避免被 private 规则抢先直连；新增内网资源加在这里
 const intranetRules = [
   'DOMAIN,sslvpn.jbysoft.com,直连', // aTrust 网关必须直连，否则掉线/封号
-  'DOMAIN-SUFFIX,sjgjj.cn,内网', // 内网 GitLab
+  'DOMAIN,git.sjgjj.cn,内网', // 内网 GitLab
   'IP-CIDR,10.0.0.0/8,内网,no-resolve', // 内网 10 段兜底（含堡垒机 10.0.1.100）
   'IP-CIDR,113.125.201.130/31,内网,no-resolve', // chat 服务后端
   'IP-CIDR,222.222.216.74/32,内网,no-resolve', // znkf__manage 接口服务器
