@@ -359,9 +359,9 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     ]);
     h.assert(!('doh.pub' in out.hosts), '应让 DNSPod 域名正常解析');
   });
-  h.test('国内与直连公共解析使用 DoH，关闭 DNS IPv6并保留私有解析例外', () => {
+  h.test('国内与直连解析使用陕西移动 DNS 与阿里 DoQ，关闭 DNS IPv6并保留私有解析例外', () => {
     const out = api.main(fx.typicalSubscription());
-    const domesticDNS = ['https://dns.alidns.com/dns-query#DIRECT', 'https://doh.pub/dns-query#DIRECT'];
+    const domesticDNS = ['218.200.6.139#DIRECT', 'quic://dns.alidns.com:853#DIRECT'];
     h.assertDeep(out.dns['nameserver-policy']['rule-set:cn'], domesticDNS);
     h.assertDeep(out.dns['direct-nameserver'], domesticDNS);
     h.assertEqual(out.dns['direct-nameserver-follow-policy'], true);
