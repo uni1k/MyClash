@@ -1291,6 +1291,17 @@ function main(config) {
     'auto-redirect': true,
     'auto-detect-interface': true,
     'dns-hijack': ['any:53', 'tcp://any:53'],
+    // 完整排除清单统一在此管理；建议关闭 Bettbox「排除私有网段」内置开关，避免应用层叠加
+    // 10/8 与 192.168/16 不能排除（公司内网位于这两段），本地局域网由 private 规则集兜底直连
+    'route-exclude-address': [
+      '127.0.0.0/8',
+      '::1/128',
+      '169.254.0.0/16',
+      '172.16.0.0/12', // 含本机 Docker 网桥 172.17.0.0/16
+      '172.168.0.0/16', // 额外直连网段（非 RFC1918 私网）
+      'fe80::/10',
+      'fc00::/7',
+    ],
   };
 
   newConfig['proxies'] = [...mappedProxies, ...customProxies, ...directProxies, ...intranetProxies];
