@@ -1728,6 +1728,7 @@ function main(config) {
     'auto-redirect': true,
     'auto-detect-interface': true,
     'dns-hijack': ['any:53', 'tcp://any:53'],
+    // 排除清单以脚本为准，请关闭 Bettbox「排除私有网段」开关；10/8 与 192.168/16 属公司内网，勿排除
     'route-exclude-address': [
       // 完整排除清单统一在此管理；建议关闭 Bettbox「排除私有网段」内置开关，避免应用层叠加
       // 10/8 与 192.168/16 不能排除（公司内网位于这两段），本地局域网由 private 规则集兜底直连
