@@ -141,40 +141,20 @@ const iconBaseUrl = 'https://cdn.jsdmirror.com/gh/uni1k/MyClash@main/Icons/svg/'
 // 规则集 URL 公共前缀
 const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/geo/';
 
-// --- docker-atrust 内网接入 ---
-// aTrust 容器（docker-easyconnect 项目）对外提供 socks5/http 代理，详见
-// https://github.com/docker-easyconnect/docker-easyconnect/blob/master/doc/usage.md
-const intranetProxies = [
-  {
-    name: '内网-aTrust',
-    type: 'socks5',
-    server: '127.0.0.1',
-    port: 1080,
-  },
-];
+// --- docker-atrust 内网接入（容器 socks5 代理: 127.0.0.1:1080） ---
+const intranetProxies = [{ name: '内网-aTrust', type: 'socks5', server: '127.0.0.1', port: 1080 }];
 
-// 内网策略组：流量经容器代理进入公司内网
-const intranetGroup = {
-  name: '内网',
-  type: 'select',
-  proxies: ['内网-aTrust', '直连'],
-  icon: `${iconBaseUrl}Server.svg`,
-};
+const intranetGroup = { name: '内网', type: 'select', proxies: ['内网-aTrust', '直连'], icon: `${iconBaseUrl}Server.svg` };
 
-// 内网分流规则
-// 注意：必须置于 prefixRules 之前，否则会被 private / geolocation-cn 规则抢先直连
+// 内网分流规则，须置于 prefixRules 之前，避免被 private 规则抢先直连；新增内网资源加在这里
 const intranetRules = [
-  // aTrust 网关必须直连：建连流量若被 TUN 送进代理节点，会导致掉线甚至封号
-  'DOMAIN,sslvpn.jbysoft.com,直连',
-  // 在此追加公司内网域名，例如：'DOMAIN-SUFFIX,oa.example.com,内网',
+  'DOMAIN,sslvpn.jbysoft.com,直连', // aTrust 网关必须直连，否则掉线/封号
   'DOMAIN-SUFFIX,sjgjj.cn,内网', // 内网 GitLab
-  // 容器隧道可达的内网网段与服务器（按实际情况增删）
-  'IP-CIDR,10.0.0.0/8,内网,no-resolve', // 内网 10 段全兜底
-  // 堡垒机等运维网段（10.0.1.100 堡垒机登录）
-  'IP-CIDR,113.125.201.130/31,内网,no-resolve', // chat 服务后端（113.125.201.130/131）
+  'IP-CIDR,10.0.0.0/8,内网,no-resolve', // 内网 10 段兜底（含堡垒机 10.0.1.100）
+  'IP-CIDR,113.125.201.130/31,内网,no-resolve', // chat 服务后端
   'IP-CIDR,222.222.216.74/32,内网,no-resolve', // znkf__manage 接口服务器
-  'IP-CIDR,192.168.5.163/32,内网,no-resolve', // 开发 MySQL（chat/outboundbot 的 jdbc 配置）
-  'IP-CIDR,192.168.45.82/32,内网,no-resolve', // 公司测试环境后端（8013/8014/9322）
+  'IP-CIDR,192.168.5.163/32,内网,no-resolve', // 开发 MySQL
+  'IP-CIDR,192.168.45.82/32,内网,no-resolve', // 公司测试环境后端
 ];
 
 // 定义地区策略组
@@ -1749,10 +1729,9 @@ function main(config) {
     'auto-detect-interface': true,
     'dns-hijack': ['any:53', 'tcp://any:53'],
     'route-exclude-address': [
-      // 注意：不再排除 10.0.0.0/8 与 192.168.0.0/16，公司内网（docker-atrust 容器隧道）位于这些段，
-      // 排除会导致内网 IP 流量绕过 TUN 无法进入分流；本地局域网由 mihomo 的 private 规则集兜底直连
+      // 10/8 与 192.168/16 不能排除（公司内网位于这两段），本地局域网由 private 规则集兜底直连
       '172.16.0.0/12',
-      '172.168.0.0/16', // 用户指定的额外直连网段（非 RFC1918 私网）
+      '172.168.0.0/16', // 额外直连网段（非 RFC1918 私网）
       'fc00::/7',
     ],
   };
