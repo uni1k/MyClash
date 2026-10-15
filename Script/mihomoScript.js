@@ -173,6 +173,8 @@ const intranetRules = [
   // 堡垒机等运维网段（10.0.1.100 堡垒机登录）
   'IP-CIDR,113.125.201.130/31,内网,no-resolve', // chat 服务后端（113.125.201.130/131）
   'IP-CIDR,222.222.216.74/32,内网,no-resolve', // znkf__manage 接口服务器
+  'IP-CIDR,192.168.5.163/32,内网,no-resolve', // 开发 MySQL（chat/outboundbot 的 jdbc 配置）
+  'IP-CIDR,192.168.45.82/32,内网,no-resolve', // 公司测试环境后端（8013/8014/9322）
 ];
 
 // 定义地区策略组
@@ -1747,11 +1749,10 @@ function main(config) {
     'auto-detect-interface': true,
     'dns-hijack': ['any:53', 'tcp://any:53'],
     'route-exclude-address': [
-      // 注意：不再排除 10.0.0.0/8，公司内网（docker-atrust 容器隧道）位于该段，
-      // 排除会导致内网 IP 流量绕过 TUN 无法进入分流
+      // 注意：不再排除 10.0.0.0/8 与 192.168.0.0/16，公司内网（docker-atrust 容器隧道）位于这些段，
+      // 排除会导致内网 IP 流量绕过 TUN 无法进入分流；本地局域网由 mihomo 的 private 规则集兜底直连
       '172.16.0.0/12',
       '172.168.0.0/16', // 用户指定的额外直连网段（非 RFC1918 私网）
-      '192.168.0.0/16',
       'fc00::/7',
     ],
   };

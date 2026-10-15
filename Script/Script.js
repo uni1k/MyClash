@@ -155,6 +155,8 @@ const intranetRules = [
   // 堡垒机等运维网段（10.0.1.100 堡垒机登录）
   'IP-CIDR,113.125.201.130/31,内网,no-resolve', // chat 服务后端（113.125.201.130/131）
   'IP-CIDR,222.222.216.74/32,内网,no-resolve', // znkf__manage 接口服务器
+  'IP-CIDR,192.168.5.163/32,内网,no-resolve', // 开发 MySQL（chat/outboundbot 的 jdbc 配置）
+  'IP-CIDR,192.168.45.82/32,内网,no-resolve', // 公司测试环境后端（8013/8014/9322）
 ];
 
 // 定义地区策略组
