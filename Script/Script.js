@@ -150,10 +150,11 @@ const intranetRules = [
   'DOMAIN,sslvpn.jbysoft.com,直连',
   // 在此追加公司内网域名，例如：'DOMAIN-SUFFIX,oa.example.com,内网',
   'DOMAIN-SUFFIX,sjgjj.cn,内网', // 内网 GitLab
-  // 容器隧道可达的内网网段（按实际情况增删）
-  'IP-CIDR,10.0.216.0/24,内网,no-resolve',
+  // 容器隧道可达的内网网段与服务器（按实际情况增删）
+  'IP-CIDR,10.0.0.0/8,内网,no-resolve', // 内网 10 段全兜底
   // 堡垒机等运维网段（10.0.1.100 堡垒机登录）
-  'IP-CIDR,10.0.1.0/24,内网,no-resolve',
+  'IP-CIDR,113.125.201.130/31,内网,no-resolve', // chat 服务后端（113.125.201.130/131）
+  'IP-CIDR,222.222.216.74/32,内网,no-resolve', // znkf__manage 接口服务器
 ];
 
 // 定义地区策略组
