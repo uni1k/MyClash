@@ -149,6 +149,7 @@ const intranetRules = [
   // aTrust 网关必须直连：建连流量若被 TUN 送进代理节点，会导致掉线甚至封号
   'DOMAIN,sslvpn.jbysoft.com,直连',
   // 在此追加公司内网域名，例如：'DOMAIN-SUFFIX,oa.example.com,内网',
+  'DOMAIN-SUFFIX,sjgjj.cn,内网', // 内网 GitLab
   // 容器隧道可达的内网网段（按实际情况增删）
   'IP-CIDR,10.0.216.0/24,内网,no-resolve',
   // 堡垒机等运维网段（10.0.1.100 堡垒机登录）
