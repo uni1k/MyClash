@@ -123,6 +123,38 @@ const iconBaseUrl = 'https://cdn.jsdmirror.com/gh/uni1k/MyClash@main/Icons/svg/'
 // 规则集 URL 公共前缀
 const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/geo/';
 
+// --- docker-atrust 内网接入 ---
+// aTrust 容器（docker-easyconnect 项目）对外提供 socks5/http 代理，详见
+// https://github.com/docker-easyconnect/docker-easyconnect/blob/master/doc/usage.md
+const intranetProxies = [
+  {
+    name: '内网-aTrust',
+    type: 'socks5',
+    server: '127.0.0.1',
+    port: 1080,
+  },
+];
+
+// 内网策略组：流量经容器代理进入公司内网
+const intranetGroup = {
+  name: '内网',
+  type: 'select',
+  proxies: ['内网-aTrust', '直连'],
+  icon: `${iconBaseUrl}Server.svg`,
+};
+
+// 内网分流规则
+// 注意：必须置于 prefixRules 之前，否则会被 private / geolocation-cn 规则抢先直连
+const intranetRules = [
+  // aTrust 网关必须直连：建连流量若被 TUN 送进代理节点，会导致掉线甚至封号
+  'DOMAIN,sslvpn.jbysoft.com,直连',
+  // 在此追加公司内网域名，例如：'DOMAIN-SUFFIX,oa.example.com,内网',
+  // 容器隧道可达的内网网段（按实际情况增删）
+  'IP-CIDR,10.0.216.0/24,内网,no-resolve',
+  // 堡垒机等运维网段（10.0.1.100 堡垒机登录）
+  'IP-CIDR,10.0.1.0/24,内网,no-resolve',
+];
+
 // 定义地区策略组
 const regionDefinitions = [
   {
@@ -811,6 +843,7 @@ function buildFunctionalGroups(filteredProxies, generatedRegionGroups, customize
     proxies: [
       ...functionalGroups.map((g) => g.name),
       ...customGroupNames,
+      intranetGroup.name,
       directGroup.name,
       ...generatedRegionGroups.map((g) => g.name),
     ],
@@ -1276,17 +1309,19 @@ function main(config) {
     'dns-hijack': ['any:53', 'tcp://any:53'],
   };
 
-  newConfig['proxies'] = [...mappedProxies, ...customProxies, ...directProxies];
+  newConfig['proxies'] = [...mappedProxies, ...customProxies, ...directProxies, ...intranetProxies];
   newConfig['proxy-groups'] = [
     globalGroup,
     ...functionalGroups,
     ...(customGroup ? [customGroup] : []),
+    intranetGroup,
     directGroup,
     ...generatedRegionGroups,
   ];
   newConfig['rule-providers'] = finalRuleProviders;
 
   newConfig['rules'] = [
+    ...intranetRules,
     ...prefixRules,
     ...(ruleOptionsEnable.屏蔽国外QUIC ? blockForeignQuic : []),
     ...functionalRules,

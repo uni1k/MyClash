@@ -437,8 +437,8 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
       const groups = out['proxy-groups'];
       h.assertDeep(
         groups.map((g) => g.name),
-        ['GLOBAL', '默认代理', '直连'],
-        '极简模式策略组应仅保留 GLOBAL、默认代理和直连',
+        ['GLOBAL', '默认代理', '内网', '直连'],
+        '极简模式策略组应仅保留 GLOBAL、默认代理、内网和直连（内网组为基础设施，始终保留）',
       );
       h.assert(!out.dns['fake-ip-filter'].includes('rule-set:googlefcm'), '不应注入 FCM fake-IP 规则');
       h.assert(!out.rules.some((rule) => /,(Google|AI|Telegram|Steam|AdBlock)$/.test(rule)), '不应生成分流规则');
@@ -540,8 +540,8 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
 
   // ---------------- 代理 IP 版本优先 ----------------
   h.section('集成测试 · 代理IP版本优先');
-  const nonDirectProxies = (out) => out.proxies.filter((p) => p.type !== 'direct');
-  h.test('代理IPV4优先=true → 订阅节点统一为 ipv4-prefer，自定义/直连节点不受影响', () => {
+  const nonDirectProxies = (out) => out.proxies.filter((p) => p.type !== 'direct' && p.name !== '内网-aTrust');
+  h.test('代理IPV4优先=true → 订阅节点统一为 ipv4-prefer，自定义/直连/内网节点不受影响', () => {
     // 注入带 ip-version 的自定义节点，验证其不参与改写
     const customApi = loadScript(scriptFile, (code) =>
       code.replace(
@@ -570,7 +570,7 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
       );
     });
   });
-  h.test('代理IPV6优先=true → 订阅节点统一为 ipv6-prefer', () =>
+  h.test('代理IPV6优先=true → 订阅节点统一为 ipv6-prefer，自定义/直连/内网节点不受影响', () =>
     withOptions(api, { 代理IPV4优先: false, 代理IPV6优先: true }, () => {
       const out = api.main(fx.typicalSubscription());
       for (const p of nonDirectProxies(out)) {
