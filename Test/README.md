@@ -53,6 +53,7 @@ npm --prefix Test install
 
 - 节点过滤（DIRECT/REJECT/rematch/信息节点）、标准化补国旗、dialer-proxy 修复
 - GLOBAL 策略组聚合所有策略组
+- 自动选择组输出 600 秒间隔、2000ms 超时、2 次失败阈值，保留各版本容忍度及懒惰测速，不影响手动选择组公共参数
 - DNS 与 hosts（`default-nameserver` 与 `proxy-server-nameserver` 分别使用加密 IP DoH 与阿里 DoQ / 腾讯 DoH（引导查询不添加明文兜底，不关闭证书验证）；私有 DNS 在无节点专属 policy 时合并写入节点域名 policy、有专属 policy 时优先保留、公共 DNS 过滤；节点域名 policy/fake-ip-filter 保留（节点域名仅取映射后的 server 且排除 IP 类型）、DNSPod 域名不固定到旧 IP、默认 hosts 映射，以及 hosts 映射改写 server；仅当 `proxy-server-nameserver` 有且仅有一个条目且包含 `listen` 值，或条目含 `127.0.0.1` 且 `listen` 含 `0.0.0.0` 时才触发改写，未命中时跳过改写）
 - 全量版 FCM 默认通过“默认代理”访问，同时保留手动直连选项
 - 国内及直连 DNS 使用陕西移动 `218.200.6.139#DIRECT` 与阿里 `quic://dns.alidns.com:853#DIRECT`、DNS IPv6 默认关闭、私有域名和抖音解析例外保留

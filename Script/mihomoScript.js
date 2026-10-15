@@ -334,7 +334,9 @@ const selectBaseOption = {
 const urlTestBaseOption = {
   ...groupBaseOption,
   type: 'url-test',
-  interval: 900,
+  interval: 600,
+  timeout: 2000,
+  'max-failed-times': 2,
   tolerance: 100,
   'exclude-type': 'DIRECT',
   icon: `${iconBaseUrl}Auto.svg`,

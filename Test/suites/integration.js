@@ -122,7 +122,7 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     h.assert(out.tun['route-exclude-address'].includes('fc00::/7'), 'TUN 应排除 IPv6 ULA 私网');
     for (const groupName of ['自动选择', '香港-自动选择']) {
       const group = groupByName(out['proxy-groups'], groupName);
-      h.assertEqual(group.interval, 900, `${groupName} 测速间隔应为 900 秒`);
+      h.assertEqual(group.interval, 600, `${groupName} 测速间隔应为 600 秒`);
       h.assertEqual(group.tolerance, 100, `${groupName} 切换容差应为 100ms`);
     }
   });
@@ -378,6 +378,22 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
       h.assert(fcm.proxies.includes('直连'), '保留手动直连选项');
     });
   }
+
+  h.test('自动选择每 600 秒测速、超时 2000ms、失败阈值 2 次，保留各版本容忍度', () => {
+    const out = api.main(fx.typicalSubscription());
+    const autoGroups = out['proxy-groups'].filter((group) => group.type === 'url-test');
+    h.assert(autoGroups.length > 0, '应生成自动选择组');
+    for (const group of autoGroups) {
+      h.assertEqual(group.interval, 600);
+      h.assertEqual(group.timeout, 2000);
+      h.assertEqual(group['max-failed-times'], 2);
+      h.assertEqual(group.tolerance, meta.full ? 100 : 50);
+      h.assertEqual(group.lazy, true);
+    }
+    const manualGroup = groupByName(out['proxy-groups'], '手动选择');
+    h.assertEqual(manualGroup.timeout, 3000);
+    h.assertEqual(manualGroup['max-failed-times'], 3);
+  });
 
   // ---------------- 配置选项切换 ----------------
   h.section('集成测试 · 配置选项切换');
