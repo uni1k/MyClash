@@ -156,6 +156,10 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     h.assertEqual(atrust.type, 'socks5');
     h.assertEqual(atrust.server, '127.0.0.1');
     h.assertEqual(atrust.port, 1080);
+    h.assert(
+      out.tun['route-address'].includes('192.168.0.168/32'),
+      'TUN 应显式引入 Jenkins IP（本机与其同网段，直连路由会抢先）',
+    );
   });
 
   // ---------------- GLOBAL 策略组 ----------------

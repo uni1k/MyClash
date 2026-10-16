@@ -1800,6 +1800,8 @@ function main(config) {
     'auto-redirect': true,
     'auto-detect-interface': true,
     'dns-hijack': ['any:53', 'tcp://any:53'],
+    // 本机与 Jenkins 同在 192.168.0.0/24，macOS 直连路由比 TUN 的 /1 兜底更精确，必须显式引入隧道
+    'route-address': ['192.168.0.168/32'],
     // 排除清单以脚本为准，请关闭 Bettbox「排除私有网段」开关；10/8 与 192.168/16 属公司内网，勿排除
     'route-exclude-address': [
       // 完整排除清单统一在此管理；建议关闭 Bettbox「排除私有网段」内置开关，避免应用层叠加
