@@ -140,6 +140,24 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     });
   });
 
+  h.test('全量版 Jenkins IP 优先于私网直连规则，经 aTrust 内网代理访问', () => {
+    if (!meta.full) return;
+    const out = api.main(fx.minimalSubscription());
+    const rule = 'IP-CIDR,192.168.0.168/32,内网,no-resolve';
+    const ruleIndex = out.rules.indexOf(rule);
+    const privateIndex = out.rules.indexOf('RULE-SET,private,直连');
+    h.assert(ruleIndex >= 0, '缺少 Jenkins IP 分流规则');
+    h.assert(privateIndex > ruleIndex, 'Jenkins IP 规则必须先于私网直连规则');
+    const intranet = groupByName(out['proxy-groups'], '内网');
+    h.assert(intranet, '缺少内网策略组');
+    h.assertEqual(intranet.proxies[0], '内网-aTrust');
+    const atrust = out.proxies.find((p) => p.name === '内网-aTrust');
+    h.assert(atrust, '缺少 aTrust 代理');
+    h.assertEqual(atrust.type, 'socks5');
+    h.assertEqual(atrust.server, '127.0.0.1');
+    h.assertEqual(atrust.port, 1080);
+  });
+
   // ---------------- GLOBAL 策略组 ----------------
   h.section('集成测试 · GLOBAL 策略组');
   h.test('GLOBAL 聚合所有策略组', () => {

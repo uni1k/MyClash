@@ -153,6 +153,7 @@ const intranetRules = [
   'IP-CIDR,10.0.0.0/8,内网,no-resolve', // 内网 10 段兜底（含堡垒机 10.0.1.100）
   'IP-CIDR,113.125.201.130/31,内网,no-resolve', // chat 服务后端
   'IP-CIDR,222.222.216.74/32,内网,no-resolve', // znkf__manage 接口服务器
+  'IP-CIDR,192.168.0.168/32,内网,no-resolve', // Jenkins（智能客服）
   'IP-CIDR,192.168.5.163/32,内网,no-resolve', // 开发 MySQL
   'IP-CIDR,192.168.45.82/32,内网,no-resolve', // 公司测试环境后端
 ];
