@@ -22,7 +22,7 @@
 #   家用网段已改为 192.168.88.0/24，与公司 192.168.0.0/24 不再重叠，冲突面为 0，
 #   本脚本**不需要安装**，仅作为「临时接入 192.168.0.0/24 的 Wi-Fi 时」的备用手段保留。
 #
-# 安装 / 卸载见 docs/intranet-routing-analysis.md 第十一节
+# 安装 / 卸载见 docs/intranet-routing-analysis.md 第 7 节（备选方案）
 #
 set -u
 PATH=/usr/bin:/bin:/usr/sbin:/sbin

@@ -1,143 +1,89 @@
 # MyClash
 
-基于 [Mihomo](https://github.com/MetaCubeX/mihomo/tree/Alpha) 的**覆写脚本与配置文件**，仅适用于 mihomo 内核的代理客户端
+基于 [Mihomo](https://github.com/MetaCubeX/mihomo/tree/Alpha) 的**覆写脚本与配置文件**，仅适用于 mihomo 内核的代理客户端。
 
-> [!IMPORTANT]
->
-> ⚠️ 使用脚本或配置时，请关闭代理软件的 DNS 覆写功能，以确保功能正常
+## 注意事项
+
+- 使用本项目的脚本或配置时，**请关闭代理软件自带的 DNS 覆写**，否则 DNS 分流不生效。
+- 脚本只用于覆写机场提供的配置文件，不要用它覆写自己手写的配置。
+- Windows 上如需杜绝 DNS 泄露，关闭系统「智能多宿主名称解析」，或在客户端开启[严格路由](https://wiki.metacubex.one/config/inbound/tun/#strict-route)。
+- 内网分流（aTrust / Jenkins 等）的额外配置单独维护，见 [`docs/intranet-routing-analysis.md`](/docs/intranet-routing-analysis.md)。
 
 ## 特色功能
 
-- 🧩 **丰富的分流策略组**：内置 AI、YouTube、Google、Telegram、Steam、Netflix、Spotify 等常用分流组，可按需启用
-- 🎨 **精美图标**：策略组采用精心绘制的 SVG 图标，支持无损缩放与高清渲染，任意尺寸下均保持清晰
-- 🌏 **地区节点自动分组**：自动识别香港、日本、美国、新加坡、台湾等地区，并生成对应策略组
-- 🧹 **节点智能整理**：自动补国旗、优化节点名称、过滤无效节点，并按倍率自动分类
-- ✨ **精准国内外分流**：区别于常见的 `cn-domain,直连` 分流方案，本仓库采用优化后的 `cn-ip,直连` 作为兜底规则，结合 `cn-domain` 国内 DNS 分流，减少国内流量误走代理、国外流量误判直连的情况，让分流更精准
-- 🪶 **轻量规则方案**：采用 `rule-set` 按需加载规则，减少配置体积与内存占用
-- 🛡️ **DNS 分流与加密解析**：使用加密 DNS 引导、节点解析与国内公共解析，国外公共解析通过代理查询
-- 🔧 **私有 DNS 自动处理**：自动处理机场私有 DNS 与节点域名 hosts 映射，无需手动修改
-- 🪜 **高级代理功能**：支持自定义节点、IPv4 / IPv6 优先及国外 QUIC 屏蔽
-- 📱 **适配 [Bettbox](https://github.com/appshubcc/Bettbox) 图形化配置**：可直接在图形界面中开关策略组和功能选项，无需手动修改代码
+- 🧩 **分流策略组**：内置 AI、YouTube、Google、Telegram、Steam、Netflix、Spotify 等常用分组，可按需开关
+- 🎨 **SVG 图标**：策略组图标为手绘矢量，任意尺寸清晰；制作规范见 [`AGENT.md`](/AGENT.md)
+- 🌏 **地区自动分组**：识别香港、日本、美国、新加坡、台湾等地区并生成对应策略组
+- 🧹 **节点整理**：自动补国旗、规范名称、过滤无效节点、按倍率归类
+- ✨ **精准分流**：以 `cn-ip,直连` 兜底 + `cn-domain` 国内 DNS 分流，减少「国内误走代理、国外误判直连」
+- 🪶 **轻量规则**：`rule-set` 按需加载，降低配置体积与内存占用
+- 🛡️ **DNS 分流**：加密 DNS 引导、节点解析、国内公共解析；国外解析经代理查询
+- 🔧 **私有 DNS 自动处理**：自动识别机场私有 DNS 与节点域名 hosts 映射
+- 🪜 **高级功能**：自定义节点、IPv4/IPv6 优先、屏蔽国外 QUIC
+- 📱 **Bettbox 图形化适配**：可在界面直接开关策略组与功能项，无需改代码
 
 ## 版本选择
 
-提供**全量版**和**精简版**，两者功能基本一致，仅分流策略组数量不同：
+全量版与精简版功能基本一致，仅分流策略组数量不同：
 
-- **全量版**：包含完整的分流策略组，适合需要精细分流的用户
-- **精简版**：仅保留常用分流策略组，配置更加简洁
+- **全量版**：完整分流组，适合精细分流
+- **精简版**：仅保留常用组，配置更简洁
 
----
+## 使用方法
 
-## 覆写脚本
+导入链接或完整代码即可，两个脚本分别对应两个版本：
 
-> [!IMPORTANT]
->
-> - 脚本仅用于覆写机场提供的配置文件，请勿用于覆写自行编写的配置
-> - 脚本已处理部分机场私有 DNS 和节点域名 hosts 映射导致的解析问题，请关闭代理软件的 DNS 覆写功能
-> - 在 Windows 上如需解决 DNS 泄露，需关闭系统“智能多宿主名称解析”，或在代理软件中开启 [严格路由](https://wiki.metacubex.one/config/inbound/tun/#strict-route)
+| 版本 | 文件 | 覆写链接 |
+| --- | --- | --- |
+| 全量版 | [`Script/mihomoScript.js`](/Script/mihomoScript.js) | `https://raw.githubusercontent.com/uni1k/MyClash/refs/heads/main/Script/mihomoScript.js` |
+| 精简版 | [`Script/Script.js`](/Script/Script.js) | `https://raw.githubusercontent.com/uni1k/MyClash/refs/heads/main/Script/Script.js` |
 
-### DNS 处理（核心特色功能）
+![导入步骤](https://raw.githubusercontent.com/uni1k/MyClash/main/Image/import.webp)
 
-越来越多的机场开始使用私有 DNS 解析节点域名，普通公共 DNS 无法正确解析，更有甚者通过 hosts 映射节点域名，再通过本地监听回环到 DNS 解析，普通覆写手段根本无法处理，本项目脚本针对以上情况做了完善的处理，避免覆写后节点无法解析或被解析到垃圾线路（也就是常说的内鬼组），如果遇到解析问题请反馈
+配置文件（YAML）与脚本效果基本一致，但静态配置无法动态生成地区组，未匹配到节点的地区会回退到 `REJECT`，使用私有 DNS 或 hosts 映射的机场需手动补写：
 
-### 可配置功能
+| 版本 | 文件 |
+| --- | --- |
+| 全量版 | [`Config/mihomoConfig.yaml`](/Config/mihomoConfig.yaml) |
+| 精简版 | [`Config/mihomoConfigLite.yaml`](/Config/mihomoConfigLite.yaml) |
 
-使用 **[Bettbox](https://github.com/appshubcc/Bettbox)** 时，可以直接通过图形界面管理这些选项
+## 默认配置
 
-| 分类     | 功能                                                                                                          |
-| -------- | ------------------------------------------------------------------------------------------------------------- |
-| 策略组   | 内置多个分流策略组，每个都可单独开关，根据节点自动生成地区策略组，可选择地区自动选择、手动选择及高 / 低倍率组 |
-| 节点处理 | 过滤高倍率、低倍率及非地区节点，可统一设置 IPv4 / IPv6 优先                                                   |
-| 分流     | 可将全部节点加入分流策略组，也可启用极简模式                                                                  |
-| 网络     | 可选屏蔽国外 QUIC 流量                                                                                        |
-| 高级     | 支持自定义节点                                                                                                |
-| 兼容     | 自动处理节点 hosts 映射及机场私有 DNS                                                                         |
-
-### 默认配置
-
-- 引导解析使用阿里 IP DoH；节点域名解析使用阿里 DoQ 与腾讯 DoH。
-- 国内常规及直连解析使用陕西移动 DNS（`218.200.6.139`，明文 UDP）与阿里 DoQ（`quic://dns.alidns.com:853`），均通过 `DIRECT` 访问；国外公共解析通过代理访问 Cloudflare 与 Google。
-- 国内 DNS 上游列表不表示严格的主备顺序；陕西移动 DNS 的可用性取决于当前接入网络。
-- 私有域名继续使用系统 DNS，抖音保留原有解析例外；这些例外不保证使用加密 DNS。
-- DNS 默认不返回 AAAA 记录（`dns.ipv6: false`）。需要 IPv6 域名解析时，可修改脚本 DNS 配置；这不等同于禁用所有 IPv6 流量。
-- 两个脚本默认关闭倍率组，全量版默认关闭负载均衡；需要时可重新开启对应选项。关闭倍率组不删除倍率节点，节点仍按地区归类。
-- 自动选择组每 600 秒测速，单次测试超时 2000ms，拨号失败触发检查阈值为 2 次，保留懒惰测速；容忍度维持精简版 50ms、全量版 100ms。
-- 默认代理和 AI 的具体节点选择由客户端保存，不在脚本中固定为某个地区。
-
-### 使用方法（脚本）
-
-选择对应版本，将链接或完整代码按如图所示步骤导入支持脚本覆写的客户端即可
-
-- **全量版**
-
-[mihomoScript.js](/Script/mihomoScript.js)，复制下面这个链接使用👇👇👇
-
-```text
-https://raw.githubusercontent.com/AIsouler/MyClash/main/Script/mihomoScript.js
-```
-
-- **精简版**
-
-[Script.js](/Script/Script.js)，复制下面这个链接使用👇👇👇
-
-```text
-https://raw.githubusercontent.com/AIsouler/MyClash/main/Script/Script.js
-```
-
-|                                                                                   |
-| --------------------------------------------------------------------------------- |
-| ![img](https://raw.githubusercontent.com/AIsouler/MyClash/main/Image/import.webp) |
-
----
-
-## 配置文件
-
-配置文件与覆写脚本的整体效果基本一致，但由于 YAML 是静态配置，无法像脚本那样灵活处理
-
-因此存在以下限制：
-
-- 没有自定义配置项
-- 无法根据节点动态生成地区策略组，未匹配到节点的地区会回退到 `REJECT`
-- 使用私有 DNS 或 hosts 节点域名映射的机场，需要手动写入配置
-
-### 使用方法（配置）
-
-选择对应版本，将链接或完整代码导入 mihomo 客户端即可
-
-- **全量版**
-
-[mihomoConfig.yaml](/Config/mihomoConfig.yaml)，复制下面这个链接使用👇👇👇
-
-```text
-https://raw.githubusercontent.com/AIsouler/MyClash/main/Config/mihomoConfig.yaml
-```
-
-- **精简版**
-
-[mihomoConfigLite.yaml](/Config/mihomoConfigLite.yaml)，复制下面这个链接使用👇👇👇
-
-```text
-https://raw.githubusercontent.com/AIsouler/MyClash/main/Config/mihomoConfigLite.yaml
-```
-
----
+- 引导解析用阿里 IP DoH；节点域名解析用阿里 DoQ + 腾讯 DoH。
+- 国内常规与直连解析用陕西移动 DNS（`218.200.6.139`，明文 UDP）与阿里 DoQ（`quic://dns.alidns.com:853`），均经 `DIRECT`；国外解析经代理走 Cloudflare 与 Google。
+- 国内 DNS 上游**不是严格主备**，陕西移动 DNS 的可用性取决于当前接入网络。
+- 私有域名继续用系统 DNS，抖音保留原解析例外；这些例外不保证走加密 DNS。
+- 默认不返回 AAAA（`dns.ipv6: false`），需要 IPv6 域名解析时自行修改；这不等于禁用所有 IPv6 流量。
+- 两版默认关闭倍率组，全量版默认关闭负载均衡；关闭倍率组不删除倍率节点，节点仍按地区归类。
+- 自动选择组：600 秒测速、2000ms 超时、2 次失败阈值、保留懒惰测速；容忍度精简版 50ms、全量版 100ms。
+- 默认代理与 AI 的具体节点由客户端保存，脚本不绑定地区。
 
 ## 效果预览
 
-推荐使用 [Bettbox](https://github.com/appshubcc/Bettbox) 管理覆写脚本，可通过图形界面调整策略组和配置项
+推荐用 [Bettbox](https://github.com/appshubcc/Bettbox) 管理覆写脚本，可在界面调整策略组与配置项。
 
-|                                                                                  |                                                                                  |                                                                                  |                                                                                  |
-| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| ![img](https://raw.githubusercontent.com/AIsouler/MyClash/main/Image/IMG_1.webp) | ![img](https://raw.githubusercontent.com/AIsouler/MyClash/main/Image/IMG_2.webp) | ![img](https://raw.githubusercontent.com/AIsouler/MyClash/main/Image/IMG_3.webp) | ![img](https://raw.githubusercontent.com/AIsouler/MyClash/main/Image/IMG_4.webp) |
-| ![img](https://raw.githubusercontent.com/AIsouler/MyClash/main/Image/IMG_5.webp) | ![img](https://raw.githubusercontent.com/AIsouler/MyClash/main/Image/IMG_6.webp) | ![img](https://raw.githubusercontent.com/AIsouler/MyClash/main/Image/IMG_7.webp) | ![img](https://raw.githubusercontent.com/AIsouler/MyClash/main/Image/IMG_8.webp) |
+| | | | |
+| --- | --- | --- | --- |
+| ![1](https://raw.githubusercontent.com/uni1k/MyClash/main/Image/IMG_1.webp) | ![2](https://raw.githubusercontent.com/uni1k/MyClash/main/Image/IMG_2.webp) | ![3](https://raw.githubusercontent.com/uni1k/MyClash/main/Image/IMG_3.webp) | ![4](https://raw.githubusercontent.com/uni1k/MyClash/main/Image/IMG_4.webp) |
+| ![5](https://raw.githubusercontent.com/uni1k/MyClash/main/Image/IMG_5.webp) | ![6](https://raw.githubusercontent.com/uni1k/MyClash/main/Image/IMG_6.webp) | ![7](https://raw.githubusercontent.com/uni1k/MyClash/main/Image/IMG_7.webp) | ![8](https://raw.githubusercontent.com/uni1k/MyClash/main/Image/IMG_8.webp) |
 
-## Star History
+## 文档索引
 
-[![Star History Chart](https://api.star-history.com/chart?repos=aisouler/myclash&type=date&legend=top-left)](https://www.star-history.com/?repos=aisouler%2Fmyclash&type=date&legend=top-left)
+| 文档 | 内容 |
+| --- | --- |
+| [`AGENT.md`](/AGENT.md) | `Icons/svg/` 图标制作规范（几何、渐变、Flutter 兼容红线、校验流程） |
+| [`docs/mihomoScript-analysis.md`](/docs/mihomoScript-analysis.md) | 脚本配置审查：兼容性基线、已修问题、保留的取舍、官方依据 |
+| [`docs/intranet-routing-analysis.md`](/docs/intranet-routing-analysis.md) | 内网分流（Bettbox + docker-atrust）：三层模型、路由限制、客户端开关、覆盖率 |
+| [`Test/README.md`](/Test/README.md) | 测试运行方式与覆盖范围 |
+
+## 测试
+
+```bash
+npm --prefix Test install   # 可选：ES2020 / QuickJS 兼容性检查依赖
+npm --prefix Test test
+```
 
 ## 致谢
-
-感谢以下项目以及所有上游项目：
 
 - [dahaha-365/YaNet](https://github.com/dahaha-365/YaNet)
 - [YiXuanZX/rules](https://github.com/YiXuanZX/rules)

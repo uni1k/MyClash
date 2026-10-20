@@ -205,10 +205,12 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
         `TUN 不得排除 ${cidr}，否则内网流量根本进不了分流`,
       );
     }
-    // 172.168.0.0/16 是公网空间，曾被误写进排除清单（会让该段流量绕过隧道），不得回归
+    // 172.168.0.0/16 不是 RFC1918 私网段，bfb43fc 起按「疑似 172.16/12 笔误」移除。
+    // ⚠ 该决定与 docs/mihomoScript-analysis.md 记录的 2026-08-29 结论（用户要求该段绕过代理）冲突，
+    //    状态待确认；若确认要排除，删掉本条断言并把 CIDR 加回 route-exclude-address。
     h.assert(
       !out.tun['route-exclude-address'].includes('172.168.0.0/16'),
-      '172.168.0.0/16 不是私网段，不得排除（会让该段流量绕过隧道）',
+      '172.168.0.0/16 不是私网段，当前按移除处理；若要恢复排除，请先删除本断言',
     );
 
     const intranet = groupByName(out['proxy-groups'], '内网');
