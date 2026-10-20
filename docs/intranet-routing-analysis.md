@@ -112,7 +112,7 @@ aTrust 共下发 235 条：IPv4 214（其中 21 条是 `198.18.0.0/16` fake-ip �
 结论与推论：
 
 1. `tun` 段被客户端**整段替换**，脚本里那段是死的；历史上「从排除清单移除 `10/8`」的提交其实从未生效，10/8 能通是因为客户端 patch 的排除清单本来就空。
-2. 即使把 5 条 `/32` 写进 `patchClashConfig.tun.route-address`（脚本 `scripts/patch-bettbox-tun.py`），客户端**保留但不消费**：网络扩展的接管范围固定为 `0/0` 八条拆分，而 macOS 按最长前缀匹配，`en0` 的 `/24` connected 与 `/32` ARP 主机路由永远更精确。
+2. 即使把 5 条 `/32` 写进 `patchClashConfig.tun.route-address`（曾用 `scripts/patch-bettbox-tun.py` 实测，该脚本已随问题解决移除），客户端**保留但不消费**：网络扩展的接管范围固定为 `0/0` 八条拆分，而 macOS 按最长前缀匹配，`en0` 的 `/24` connected 与 `/32` ARP 主机路由永远更精确。
 3. `192.168.5/45/73` 能通是 `0/0` 拆分的副产品，**不能当作 `route-address` 生效的证据**（这是最容易误判的地方）。
 4. macOS 版 Bettbox「内核配置 → Tunnel」页里只有「添加转发」（`tunnels`），**没有任何界面入口能编辑 tun 设备段**。
 
@@ -153,29 +153,14 @@ aTrust 共下发 235 条：IPv4 214（其中 21 条是 `198.18.0.0/16` fake-ip �
 | OS 路由守护 | `sudo route add -host <ip> -interface utunN`，用 LaunchDaemon 每 5s 自愈 | 需 root 常驻 | 必须保持原 IP 访问、且不能改网段 |
 | 改本机网段 | 家用 LAN 挪到不重叠段 | 一次改路由器 | **治本**，可消除整段冲突 |
 
-两个已备好但当前不需要的东西：
+网段改为 `192.168.88.0/24` 后，`192.168.0.0/24` 不再与本机 LAN 重叠，冲突面归零，因此上表三种方案都不需要启用。
 
-- `scripts/bettbox-route-guard.sh` + `com.uni1k.bettbox-route-guard.plist`：按「接口地址落在 `198.18.0.1/15`」识别 TUN，只补白名单 `/32`，绝不碰 `192.168.0.0/24`；未安装。
-- `scripts/patch-bettbox-tun.py`：把 `intranetConflictHosts` 写进客户端 `patchClashConfig.tun.route-address`（**需先退出 App**，会自动备份）。写入不生效，仅用于诊断与配置收敛。
+此前为「保持原 IP 访问」准备过两样东西，已随问题解决一并移除：
 
-路由守护的安装 / 卸载（仅在改用「保持原 IP」方案时才需要）：
+- route guard（`bettbox-route-guard.sh` + LaunchDaemon plist，按接口地址落在 `198.18.0.1/15` 识别 TUN、每 5s 补白名单 `/32`，从未安装）
+- `patch-bettbox-tun.py`（把 `intranetConflictHosts` 写进客户端 `tun.route-address`，仅用于诊断）
 
-```bash
-cd /Users/yilinqu/Documents/workspace/personal/MyClash
-
-# 安装
-sudo install -m 755 scripts/bettbox-route-guard.sh /usr/local/bin/bettbox-route-guard.sh
-sudo install -m 644 scripts/com.uni1k.bettbox-route-guard.plist /Library/LaunchDaemons/com.uni1k.bettbox-route-guard.plist
-sudo launchctl bootout system /Library/LaunchDaemons/com.uni1k.bettbox-route-guard.plist 2>/dev/null
-sudo launchctl bootstrap system /Library/LaunchDaemons/com.uni1k.bettbox-route-guard.plist
-sudo cat /var/log/bettbox-route-guard.log     # 期望 tun=utunN changes=+192.168.0.168
-
-# 卸载
-sudo launchctl bootout system /Library/LaunchDaemons/com.uni1k.bettbox-route-guard.plist
-sudo rm -f /Library/LaunchDaemons/com.uni1k.bettbox-route-guard.plist \
-           /usr/local/bin/bettbox-route-guard.sh \
-           /var/log/bettbox-route-guard.log /var/run/bettbox-route-guard.state
-```
+对应的测试断言（守护脚本 `HOSTS` 与 `tun.route-address` 一致性）也已删除。`tun.route-address` 现在只保留 `192.168.0.168/32` 作为文档性记录，macOS 不消费。
 
 ---
 

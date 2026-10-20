@@ -6,21 +6,6 @@ const path = require('path');
 const groupByName = (groups, name) => groups.find((g) => g.name === name);
 const proxyNames = (proxies) => proxies.map((p) => p.name);
 
-/** 展开 /24 及更小前缀的 CIDR 为主机列表，用于跨文件一致性校验（本项目只用到 /31、/32） */
-function expandCidr(cidr) {
-  const [ip, lenRaw] = cidr.split('/');
-  const bits = lenRaw === undefined ? 32 : Number(lenRaw);
-  const o = ip.split('.').map(Number);
-  const base = ((o[0] << 24) | (o[1] << 16) | (o[2] << 8) | o[3]) >>> 0;
-  const size = bits >= 24 ? 2 ** (32 - bits) : 0;
-  const out = [];
-  for (let i = 0; i < size; i += 1) {
-    const v = (base + i) >>> 0;
-    out.push(`${(v >>> 24) & 255}.${(v >>> 16) & 255}.${(v >>> 8) & 255}.${v & 255}`);
-  }
-  return out;
-}
-
 /** 临时修改 ruleOptionsEnable 的若干选项，执行完成后恢复，避免污染后续用例 */
 function withOptions(api, patch, fn) {
   const saved = {};
@@ -218,22 +203,6 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     h.assertEqual(atrust.type, 'socks5');
     h.assertEqual(atrust.server, '127.0.0.1');
     h.assertEqual(atrust.port, 1080);
-  });
-
-  h.test('内网路由守护脚本的 HOSTS 与 TUN route-address 同源', () => {
-    // Bettbox 不消费 tun.route-address，需由 LaunchDaemon 补 OS 路由；
-    // 两边各写一份主机清单，改一处忘另一处就会静默丢路由，这里用断言锁住。
-    const guard = path.join(__dirname, '..', '..', 'scripts', 'bettbox-route-guard.sh');
-    h.assert(fs.existsSync(guard), '缺少 scripts/bettbox-route-guard.sh');
-    const src = fs.readFileSync(guard, 'utf8');
-    const m = src.match(/^HOSTS="([^"]*)"/m);
-    h.assert(m, '守护脚本缺少 HOSTS 定义');
-    const guardHosts = m[1].trim().split(/\s+/).filter(Boolean).sort();
-    h.assert(guardHosts.length > 0, '守护脚本 HOSTS 不能为空');
-
-    const out = api.main(fx.minimalSubscription());
-    const expected = out.tun['route-address'].flatMap(expandCidr).sort();
-    h.assertEqual(guardHosts.join(','), expected.join(','), '守护脚本 HOSTS 必须与 tun.route-address 完全一致');
   });
 
   h.test('图标地址不得指向上游仓库，且脚本与配置的 base 必须一致', () => {
