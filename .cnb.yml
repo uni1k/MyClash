@@ -1,0 +1,49 @@
+# CNB 流水线：与 .github/workflows/format_and_test.yaml 等价
+#
+# 与 GitHub 版的唯一差异：格式化只做「校验」不做「自动提交」。
+# GitHub 版会在格式不符时 prettier --write 后回推一个 chore: auto format 提交，
+# 在 CNB 里回推同样可行但会让提交历史多出机器人提交，且需要额外令牌，故改为直接失败。
+#
+# 触发条件与 GitHub 版对齐：仅 main 分支，且变更落在这些路径时才跑。
+main:
+  push:
+    - name: format-and-test
+      ifModify:
+        - 'Script/**'
+        - 'Test/**'
+        - '**/*.yaml'
+        - '**/*.yml'
+        - '.prettierrc*'
+      docker:
+        image: node:24
+        volumes:
+          - /root/.npm
+      stages:
+        - name: prettier check
+          script: |
+            npx --yes prettier@3 --check $(git ls-files '*.js' '*.yml' '*.yaml')
+        - name: test
+          script: |
+            npm --prefix Test install
+            node Test/run-tests.js
+
+  pull_request:
+    - name: format-and-test
+      ifModify:
+        - 'Script/**'
+        - 'Test/**'
+        - '**/*.yaml'
+        - '**/*.yml'
+        - '.prettierrc*'
+      docker:
+        image: node:24
+        volumes:
+          - main:/root/.npm:copy-on-write-read-only
+      stages:
+        - name: prettier check
+          script: |
+            npx --yes prettier@3 --check $(git ls-files '*.js' '*.yml' '*.yaml')
+        - name: test
+          script: |
+            npm --prefix Test install
+            node Test/run-tests.js
