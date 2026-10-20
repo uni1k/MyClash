@@ -243,6 +243,27 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     );
   });
 
+  h.test('节点名含零宽字符：匹配期剥离后地区/过滤正常，且节点名不被改写', () => {
+    const zw = fx.withInvisibleChars;
+    const out = api.main(fx.invisibleCharsSubscription());
+    const n = proxyNames(out.proxies);
+
+    // 1. 节点名必须保持原样（不可见字符仍在），不做任何清洗改写
+    h.assert(n.includes(`🇭🇰 ${zw('HK 01')}`), 'HK 01 应补国旗并保留原名中的不可见字符');
+    h.assert(n.includes('🇸🇬 \u3164SG\uFFA0 03'), 'SG 03 应补国旗并保留谚文填充符');
+    h.assert(!n.some((x) => x === '🇭🇰 HK 01'), '不得输出被清洗过的名字（说明发生了改写）');
+
+    // 2. 匹配不受影响：地区识别、信息节点过滤、倍率判断均正常
+    h.assert(!n.some((x) => x.includes('官网')), '信息节点应被过滤');
+    h.assert(groupByName(out['proxy-groups'], '香港').proxies.includes(`🇭🇰 ${zw('HK 01')}`), '应归入香港地区组');
+    h.assert(groupByName(out['proxy-groups'], '新加坡').proxies.includes('🇸🇬 \u3164SG\uFFA0 03'), '应归入新加坡地区组');
+
+    // 3. dialer-proxy 引用照常同步（名字只被补了国旗，未发生清洗）
+    const us = out.proxies.find((x) => x.name === `🇺🇸 ${zw('US 04')}`);
+    h.assert(us, 'US 04 应存在');
+    h.assertEqual(us['dialer-proxy'], `🇭🇰 ${zw('HK 01')}`, 'dialer-proxy 应同步为补国旗后的名字');
+  });
+
   // ---------------- GLOBAL 策略组 ----------------
   h.section('集成测试 · GLOBAL 策略组');
   h.test('GLOBAL 聚合所有策略组', () => {

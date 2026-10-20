@@ -44,7 +44,8 @@ npm --prefix Test install
 - `matchDomainPattern`：精确 / `+.` / `.` / `*.` / 中间通配符、大小写
 - `applyHostsToProxies`：hosts 映射改写节点 server（精确/通配/数组取值/优先级/链式映射，回环映射防御性终止）
 - `stripDnsSuffix`：# 策略组后缀处理（#direct 或 #direct&参数 整条保留，direct 后接其他字符仍剥离）
-- `getMatchedRegions`：香港 / 日本 / 美国 / 新加坡 / 台湾（全量版）以及低/高倍率匹配
+- `getMatchedRegions`：香港 / 日本 / 美国 / 新加坡 / 台湾（全量版）以及低/高倍率匹配；名称夹零宽/不可见字符时仍能匹配
+- `toMatchableName`：取节点名「可用于匹配」的形式——剥离零宽/不可见字符（含双向控制符、隐形运算符、隔离符、谚文填充符、BOM），保留 ZWJ/ZWNJ 与变体选择符；仅供正则匹配使用，不改动原节点名
 - `normalizeProxyName`：自动补国旗、折叠空格、保持原名
 - `fixDialerProxy`：重命名引用更新、引用目标不存在时移除、未变引用保留
 - `buildCustomizeGroups`：自定义节点标准化、与订阅节点重名加“自建-”前缀、内部去重、构建“自建节点”策略组
@@ -52,6 +53,7 @@ npm --prefix Test install
 ### 集成测试（main 覆写）
 
 - 节点过滤（DIRECT/REJECT/rematch/信息节点）、标准化补国旗、dialer-proxy 修复
+- 节点名含零宽字符（`invisibleCharsSubscription`）：地区识别、信息节点过滤、倍率判断均不受影响；且节点名**不被改写**（不可见字符原样保留，只额外补国旗），dialer-proxy 引用照常同步
 - GLOBAL 策略组聚合所有策略组
 - 自动选择组输出 600 秒间隔、2000ms 超时、2 次失败阈值，保留各版本容忍度及懒惰测速，不影响手动选择组公共参数
 - DNS 与 hosts：
@@ -77,7 +79,7 @@ Test/
 ├── lib/
 │   ├── loader.js           # vm 沙箱加载脚本并暴露 main / 内部函数 / ruleOptionsEnable
 │   ├── harness.js          # 轻量断言与 ✓/✗ 输出、汇总
-│   ├── fixtures.js         # 模拟订阅配置（典型/精简/空/仅type过滤/全部可过滤/hosts映射/通配映射/链式映射）
+│   ├── fixtures.js         # 模拟订阅配置（典型/精简/空/仅type过滤/全部可过滤/hosts映射/通配映射/链式映射/零宽字符）
 │   ├── scripts.js          # 待测试脚本列表（单一来源，供 run-tests / 两个检查模块共用）
 │   ├── es2020-check.js     # ES2020 兼容性检查逻辑（espree 语法 + 内置 API 静态扫描）
 │   └── quickjs-check.js    # QuickJS 兼容性验证逻辑（语法解析/顶层执行/main 调用）
