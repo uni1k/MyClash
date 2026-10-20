@@ -172,23 +172,29 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
       h.assert(cnIpIndex > i, `${rule} 必须先于 cn_ip 兜底`);
     }
 
-    // 192.168 内网主机：规则层与 TUN route-address 必须逐条同源，精简版同样要求
-    const hosts = [
-      '192.168.0.168/32',
-      '192.168.5.163/32',
-      '192.168.45.82/32',
-      '192.168.73.49/32',
-      '192.168.73.50/31',
-    ];
-    for (const cidr of hosts) {
+    // 192.168 分两类策略：与家用 LAN 无交集的段整段放行；与家用 LAN 同段的按主机白名单
+    const segments = ['192.168.5.0/24', '192.168.45.0/24', '192.168.73.0/24'];
+    const conflictHosts = ['192.168.0.168/32'];
+    for (const cidr of [...segments, ...conflictHosts]) {
       const rule = `IP-CIDR,${cidr},内网,no-resolve`;
       const i = out.rules.indexOf(rule);
       h.assert(i >= 0, `缺少内网分流规则 ${rule}`);
       h.assert(privateIndex > i, `${rule} 必须先于私网直连规则`);
       h.assert(privateIpIndex > i, `${rule} 必须先于 private_ip 兜底`);
+    }
+
+    // 只有冲突主机需要显式进 TUN 路由；整段写进 route-address 会把本机 LAN 一起拖进隧道
+    for (const cidr of conflictHosts) {
       h.assert(
         out.tun['route-address'].includes(cidr),
-        `TUN route-address 缺少 ${cidr}：与本地局域网同段时会被 connected route 抢走，规则形同虚设`,
+        `TUN route-address 缺少 ${cidr}：与本机 LAN 同段时会被 connected route 抢走，规则形同虚设`,
+      );
+    }
+    for (const cidr of out.tun['route-address']) {
+      h.assertEqual(
+        Number(cidr.split('/')[1]),
+        32,
+        `route-address 只允许 /32 主机条目（${cidr} 会把整段本机 LAN 拖进隧道）`,
       );
     }
 
@@ -199,6 +205,11 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
         `TUN 不得排除 ${cidr}，否则内网流量根本进不了分流`,
       );
     }
+    // 172.168.0.0/16 是公网空间，曾被误写进排除清单（会让该段流量绕过隧道），不得回归
+    h.assert(
+      !out.tun['route-exclude-address'].includes('172.168.0.0/16'),
+      '172.168.0.0/16 不是私网段，不得排除（会让该段流量绕过隧道）',
+    );
 
     const intranet = groupByName(out['proxy-groups'], '内网');
     h.assert(intranet, '缺少内网策略组');

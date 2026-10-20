@@ -15,8 +15,12 @@
 # 约束
 #   1) 只操作白名单里的具体主机，绝不触碰 192.168.0.0/24 的 connected 路由，
 #      以免把本机局域网（打印机、NAS、路由器）一起劫持；
-#   2) 主机清单必须与 Script/mihomoScript.js 的 intranet192Hosts 保持一致，
+#   2) 主机清单必须与 Script/mihomoScript.js 的 intranetConflictHosts 保持一致，
 #      Test/suites/integration.js 有断言守护，改一处漏另一处会测试失败。
+#
+# 现状（2026-10-20 之后）
+#   家用网段已改为 192.168.88.0/24，与公司 192.168.0.0/24 不再重叠，冲突面为 0，
+#   本脚本**不需要安装**，仅作为「临时接入 192.168.0.0/24 的 Wi-Fi 时」的备用手段保留。
 #
 # 安装 / 卸载见 docs/intranet-routing-analysis.md 第十一节
 #
@@ -24,8 +28,8 @@ set -u
 PATH=/usr/bin:/bin:/usr/sbin:/sbin
 export PATH
 
-# 由 intranet192Hosts 展开而来（/31 已展开为两个主机）
-HOSTS="192.168.0.168 192.168.5.163 192.168.45.82 192.168.73.49 192.168.73.50 192.168.73.51"
+# 由 intranetConflictHosts 展开而来（当前只有 Jenkins 一台；整段段不需要 OS 路由，走 0/0 拆分即可）
+HOSTS="192.168.0.168"
 
 STATE=/var/run/bettbox-route-guard.state
 LOG=/var/log/bettbox-route-guard.log

@@ -128,25 +128,35 @@ const intranetProxies = [{ name: '内网-aTrust', type: 'socks5', server: '127.0
 
 const intranetGroup = { name: '内网', type: 'select', proxies: ['内网-aTrust', '直连'], icon: `${iconBaseUrl}Server.svg` };
 
-// 需经 aTrust 访问的 192.168 内网主机（对应公司下发的 192.168.0/5/45/73 四段）
-// 本机局域网可能与其中某段重叠（connected route 比 TUN 兜底更精确），
-// 因此这份清单同时用于「规则层放行」与「TUN route-address 引入」，两处必须同源
-const intranet192Hosts = [
+// 公司下发的 192.168 网段共四段：.0 / .5 / .45 / .73，分流策略按「是否与家用 LAN 重叠」分两类
+//
+// ① 整段放行：与家用 LAN 无交集的段。按段写规则，公司新增主机不用改代码；
+//    若某天在公司办公、本机网卡恰好落在这类段里，本地 /24 直连路由仍比 TUN 的 /1 精确，
+//    本机流量走本地、规则不生效，不会误伤。
+const intranet192Segments = [
+  '192.168.5.0/24', // 开发段（含开发 MySQL 192.168.5.163）
+  '192.168.45.0/24', // 测试环境段（含后端 192.168.45.82）
+  '192.168.73.0/24', // 内网服务段（8000-9000）
+];
+
+// ② 逐台白名单：192.168.0.0/24 是公司唯一下发满整段的网段（.2-.254），
+//    历史上家用路由器也曾用该段，与本机 connected route 正面重叠，只能按主机放行。
+//    这份清单同时用于「规则层放行」与「TUN route-address 引入」，改一处必须改两处。
+const intranetConflictHosts = [
   '192.168.0.168/32', // Jenkins（智能客服）
-  '192.168.5.163/32', // 开发 MySQL
-  '192.168.45.82/32', // 公司测试环境后端
-  '192.168.73.49/32', // 内网服务（端口 8000-9000）
-  '192.168.73.50/31', // 内网服务（端口 8000-9000）
 ];
 
 // 内网分流规则，须置于 prefixRules 之前：两条公网内网 IP 需抢在 cn_ip 兜底之前，否则会被判直连
+// 注：公司另下发 21 条 fdff:5341:* IPv6 内网段，但 TUN 未接管 IPv6 默认路由（utun4 上无 v6 路由），
+//    加 IP-CIDR6 只会产生"规则命中却不可达"的假象，故此处明确不覆盖（详见 docs 第七节）。
 const intranetRules = [
   'DOMAIN,sslvpn.jbysoft.com,直连', // aTrust 网关必须直连，否则掉线/封号
   'DOMAIN,git.sjgjj.cn,内网', // 内网 GitLab
   'IP-CIDR,10.0.0.0/8,内网,no-resolve', // 内网 10 段兜底（含堡垒机 10.0.1.100）
   'IP-CIDR,113.125.201.130/31,内网,no-resolve', // chat 服务后端
   'IP-CIDR,222.222.216.74/32,内网,no-resolve', // znkf__manage 接口服务器
-  ...intranet192Hosts.map((cidr) => `IP-CIDR,${cidr},内网,no-resolve`),
+  ...intranet192Segments.map((cidr) => `IP-CIDR,${cidr},内网,no-resolve`),
+  ...intranetConflictHosts.map((cidr) => `IP-CIDR,${cidr},内网,no-resolve`),
 ];
 
 // 定义地区策略组
@@ -1372,15 +1382,17 @@ function main(config) {
     'auto-redirect': true,
     'auto-detect-interface': true,
     'dns-hijack': ['any:53', 'tcp://any:53'],
-    // 与 intranet192Hosts 同源：这些主机的局域网直连路由可能比 TUN 兜底更精确，必须显式引入隧道
-    'route-address': [...intranet192Hosts],
+    // 仅供与家用 LAN 同段的主机显式引入隧道。注意平台差异：
+    //   · mihomo CLI（Linux/Windows）：本字段生效，会加更细的路由；
+    //   · macOS 的 Bettbox：tun 段被客户端 patch 整段替换（NE 固定 0/0 八条拆分），本字段不生效。
+    // macOS 上遇到同段冲突请改家用网段，或参考 docs 第十二/十三节，别指望改这里。
+    'route-address': [...intranetConflictHosts],
     // 排除清单以脚本为准，请关闭 Bettbox「排除私有网段」开关；10/8 与 192.168/16 属公司内网，勿排除
     'route-exclude-address': [
       '127.0.0.0/8',
       '::1/128',
       '169.254.0.0/16',
       '172.16.0.0/12', // 含本机 Docker 网桥 172.17.0.0/16
-      '172.168.0.0/16', // 额外直连网段（非 RFC1918 私网）
       'fe80::/10',
       'fc00::/7',
     ],
