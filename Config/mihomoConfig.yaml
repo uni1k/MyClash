@@ -546,7 +546,7 @@ proxy-groups:
 
   - name: 'GitHub'
     <<: [*group_common_select, *proxies_default]
-    icon: 'https://cdn.jsdmirror.com/gh/AIsouler/MyClash@main/Icons/svg/GitHub.svg'
+    icon: 'https://cdn.jsdmirror.com/gh/uni1k/MyClash@main/Icons/svg/GitHub.svg'
 
   - name: 'Microsoft'
     <<: [*group_common_select, *proxies_direct]

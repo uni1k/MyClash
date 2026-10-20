@@ -236,6 +236,29 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     h.assertEqual(guardHosts.join(','), expected.join(','), '守护脚本 HOSTS 必须与 tun.route-address 完全一致');
   });
 
+  h.test('图标地址不得指向上游仓库，且脚本与配置的 base 必须一致', () => {
+    // 纯文件级校验，两版各跑一遍没有意义，只在全量版跑一次。
+    if (!meta.full) return;
+    // 合并上游时，upstream 新增的策略组会带 cdn.jsdmirror.com/gh/AIsouler/MyClash@main 的图标。
+    // 合进 fork 后必须改回本仓，否则图标依赖上游仓库，上游改名/删库就会静默 404。
+    const files = [
+      'Script/mihomoScript.js',
+      'Script/Script.js',
+      'Config/mihomoConfig.yaml',
+      'Config/mihomoConfigLite.yaml',
+    ];
+    const iconBaseRe = /https?:\/\/[^\s'"()]+?\/(?:Icons\/)?(?:svg|png)\//;
+    const bases = [];
+    for (const rel of files) {
+      const src = fs.readFileSync(path.join(__dirname, '..', '..', rel), 'utf8');
+      h.assert(!src.includes('/gh/AIsouler/'), `${rel} 不应引用上游 AIsouler 仓库地址`);
+      const m = src.match(iconBaseRe);
+      h.assert(m, `${rel} 未找到图标地址`);
+      bases.push(m[0]);
+    }
+    h.assertEqual(new Set(bases).size, 1, `四个文件的图标 base 必须一致，实际为 ${[...new Set(bases)].join(' | ')}`);
+  });
+
   h.test('节点名含零宽字符：匹配期剥离后地区/过滤正常，且节点名不被改写', () => {
     const zw = fx.withInvisibleChars;
     const out = api.main(fx.invisibleCharsSubscription());
