@@ -129,7 +129,12 @@ const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/g
 // --- docker-atrust 内网接入（容器 socks5 代理: 127.0.0.1:1080） ---
 const intranetProxies = [{ name: '内网-aTrust', type: 'socks5', server: '127.0.0.1', port: 1080 }];
 
-const intranetGroup = { name: '内网', type: 'select', proxies: ['内网-aTrust', '直连'], icon: `${iconBaseUrl}Server.svg` };
+const intranetGroup = {
+  name: '内网',
+  type: 'select',
+  proxies: ['内网-aTrust', '直连'],
+  icon: `${iconBaseUrl}Server.svg`,
+};
 
 // 公司下发的 192.168 网段共四段：.0 / .5 / .45 / .73，分流策略按「是否与家用 LAN 重叠」分两类
 //

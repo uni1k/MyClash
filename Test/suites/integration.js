@@ -200,10 +200,7 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
 
     // 10/8 与 192.168/16 属公司内网，不得出现在 TUN 排除清单
     for (const cidr of ['10.0.0.0/8', '192.168.0.0/16']) {
-      h.assert(
-        !out.tun['route-exclude-address'].includes(cidr),
-        `TUN 不得排除 ${cidr}，否则内网流量根本进不了分流`,
-      );
+      h.assert(!out.tun['route-exclude-address'].includes(cidr), `TUN 不得排除 ${cidr}，否则内网流量根本进不了分流`);
     }
     // 172.168.0.0/16 不是 RFC1918 私网段，bfb43fc 起按「疑似 172.16/12 笔误」移除。
     // ⚠ 该决定与 docs/mihomoScript-analysis.md 记录的 2026-08-29 结论（用户要求该段绕过代理）冲突，
@@ -236,11 +233,7 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
 
     const out = api.main(fx.minimalSubscription());
     const expected = out.tun['route-address'].flatMap(expandCidr).sort();
-    h.assertEqual(
-      guardHosts.join(','),
-      expected.join(','),
-      '守护脚本 HOSTS 必须与 tun.route-address 完全一致',
-    );
+    h.assertEqual(guardHosts.join(','), expected.join(','), '守护脚本 HOSTS 必须与 tun.route-address 完全一致');
   });
 
   h.test('节点名含零宽字符：匹配期剥离后地区/过滤正常，且节点名不被改写', () => {
@@ -476,7 +469,10 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
 
   h.test('DNS 引导解析使用 IP DoH，节点解析使用阿里 DoQ 与腾讯 DoH且不固定 DNSPod IP', () => {
     const out = api.main(fx.typicalSubscription());
-    h.assertDeep(out.dns['default-nameserver'], ['https://223.5.5.5/dns-query#DIRECT', 'https://223.6.6.6/dns-query#DIRECT']);
+    h.assertDeep(out.dns['default-nameserver'], [
+      'https://223.5.5.5/dns-query#DIRECT',
+      'https://223.6.6.6/dns-query#DIRECT',
+    ]);
     h.assertDeep(out.dns['proxy-server-nameserver'], [
       'quic://dns.alidns.com:853#DIRECT',
       'https://doh.pub/dns-query#DIRECT',
@@ -528,7 +524,14 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     const groups = out['proxy-groups'];
     h.assert(!groups.some((g) => /^(低倍率节点|高倍率节点)/.test(g.name)), '默认不应生成倍率组');
     h.assert(!groupByName(groups, '负载均衡'), '默认不应生成负载均衡组');
-    const available = new Set([...proxyNames(out.proxies), ...groups.map((g) => g.name), 'DIRECT', 'REJECT', 'REJECT-DROP', 'PASS']);
+    const available = new Set([
+      ...proxyNames(out.proxies),
+      ...groups.map((g) => g.name),
+      'DIRECT',
+      'REJECT',
+      'REJECT-DROP',
+      'PASS',
+    ]);
     for (const group of groups) {
       for (const name of group.proxies || []) h.assert(available.has(name), `${group.name} 引用了不存在的 ${name}`);
     }
@@ -539,8 +542,14 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
       const low = groupByName(out['proxy-groups'], '低倍率节点');
       const high = groupByName(out['proxy-groups'], '高倍率节点');
       h.assert(low && high, '重新开启后应生成高低倍率组');
-      h.assert(low.proxies.some((name) => name.includes('0.3x')), '低倍率组应包含低倍率节点');
-      h.assert(high.proxies.some((name) => name.includes('2x 速率')), '高倍率组应包含高倍率节点');
+      h.assert(
+        low.proxies.some((name) => name.includes('0.3x')),
+        '低倍率组应包含低倍率节点',
+      );
+      h.assert(
+        high.proxies.some((name) => name.includes('2x 速率')),
+        '高倍率组应包含高倍率节点',
+      );
     }),
   );
   if (meta.full) {

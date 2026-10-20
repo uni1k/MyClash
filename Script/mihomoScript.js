@@ -148,7 +148,12 @@ const ruleSetBaseUrl = 'https://cdn.jsdmirror.com/gh/appshubcc/bett-rules@meta/g
 // --- docker-atrust 内网接入（容器 socks5 代理: 127.0.0.1:1080） ---
 const intranetProxies = [{ name: '内网-aTrust', type: 'socks5', server: '127.0.0.1', port: 1080 }];
 
-const intranetGroup = { name: '内网', type: 'select', proxies: ['内网-aTrust', '直连'], icon: `${iconBaseUrl}Server.svg` };
+const intranetGroup = {
+  name: '内网',
+  type: 'select',
+  proxies: ['内网-aTrust', '直连'],
+  icon: `${iconBaseUrl}Server.svg`,
+};
 
 // 公司下发的 192.168 网段共四段：.0 / .5 / .45 / .73，分流策略按「是否与家用 LAN 重叠」分两类
 //
@@ -830,8 +835,6 @@ const serviceConfigs = [
 Compatible_With_Bettbox.policyGroupOptions = serviceConfigs.map((svc) => svc.name);
 
 // ---节点过滤、重命名及验证---
-
-
 
 /**
  * 零宽/不可见字符：部分机场会在节点名中逐字符插入这类字符（如 H\u200BK），会打断地区、倍率等正则匹配。
@@ -1582,10 +1585,7 @@ function isIpAddress(server) {
       parts.length === 4 &&
       parts.every(
         (part) =>
-          /^\d{1,3}$/.test(part) &&
-          (part === '0' || !part.startsWith('0')) &&
-          Number(part) >= 0 &&
-          Number(part) <= 255,
+          /^\d{1,3}$/.test(part) && (part === '0' || !part.startsWith('0')) && Number(part) >= 0 && Number(part) <= 255,
       )
     );
   };
