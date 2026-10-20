@@ -285,20 +285,89 @@ cn_ip idx 28/40 < private_ip idx 29/41（两版内网规则都在兜底之前）
 
 **结论：Bettbox 的网络扩展不消费 `tun.route-address`。** 5 条 `/32` 一条都没进内核路由表，而 `.5.163` / `.45.82` 能通纯粹是 `0/0` 拆分路由的副产品 —— 这也解释了为什么之前会误判「方案 A 生效」。
 
-进一步推断（待验证）：`config.json` 里 `overrideTunnel: true`、`patchClashConfig.tun` 的 `auto-route: false`、`route-exclude-address: []`，与观测到的「无任何 `/32`、私网全进隧道」完全吻合。**很可能脚本的整个 `tun` 段都被客户端 patch 覆盖了**——若成立，则 `95426ab`/`8b89b14` 那两个「从排除清单移除 10/8」的提交其实一直没生效，10/8 能通是因为客户端 patch 的排除清单本来就是空的。这一点对长期维护影响很大，必须证实或证伪。
+**已证实**（2026-10-20 12:08，脚本 / 客户端 patch / 内核实测三方对比）：
 
-判别方法（一次重启 + 一次点击）：把 Bettbox 的「隧道覆写」开关切到相反状态后重连，看路由表是否变成 mihomo 风格（`0/1` + `128/1`）或出现 `/32`。
+| 字段 | 脚本写的 | `patchClashConfig.tun` | `utun4` 实测 |
+| --- | --- | --- | --- |
+| `auto-route` | **true** | false | 只有 0/0 八条拆分，**无** `0.0.0.0/1`+`128.0.0.0/1` |
+| `strict-route` | **true** | false | — |
+| `auto-redirect` | **true** | false | — |
+| `route-address` | **5 条 /32** | `[]` | **0 条** |
+| `route-exclude-address` | **7 条** | `[]` | 无 |
+| `dns-hijack` | `any:53` + `tcp://any:53` | 只有 `any:53` | — |
+| `mtu` | 未设 | 9000 | **9000** |
+
+七项全部跟随 patch、零项跟随脚本 —— `tun` 段被 `patchClashConfig.tun` 整段替换，确认无疑。因此 `95426ab`/`8b89b14` 两个「从排除清单移除 10/8」的提交**从未生效**，10/8 能通是因为客户端 patch 的排除清单本来就是空的。
+
+补充确认：Bettbox「内核配置 → Tunnel」页里只有「添加转发」（即 `tunnels`，端口转发，当前为 `[]`），**macOS 版没有任何界面入口能编辑 tun 设备段**。那套值由客户端内置默认值生成，脚本怎么写都会被覆盖。
 
 ### 10.4 后续可选路径
 
 | 路径 | 做法 | 成本 | 说明 |
 | --- | --- | --- | --- |
-| ① 定位 tunnel 覆写开关 | 切换 Bettbox「隧道覆写」后重连观察路由 | 一次重连 | 能同时回答「脚本 tun 是否被整体忽略」这个更重要的问题 |
-| ② OS 层静态路由 | `sudo route -n add -host 192.168.0.168 -interface utunN`（或 LaunchDaemon 按 `198.18.0.1` 自动定位 utun） | 需 root，可做成开机自愈 | 与客户端无关，稳定；缺点是绕过了配置文件，团队协作时不可见 |
-| ③ 改本机 LAN 网段 | 家里/公司 LAN 改到 `192.168.88.0/24` 等不重叠段 | 改路由器 | 治本，冲突面直接消失，`route-address` 也就不用要了 |
+| ① ~~定位 tunnel 覆写开关~~ | 切换 Bettbox「隧道覆写」后重连观察路由 | — | **已排除**：Tunnel 页只有「添加转发」（`tunnels` 端口转发），tun 设备段无界面入口，此路不通 |
+| ② OS 层静态路由 | `sudo route -n add -host 192.168.0.168 -interface utunN`，并做成 LaunchDaemon 自愈 | 需 root，一次安装 | **已落地**，见第十一节。与客户端无关，稳定；缺点是绕过了配置文件，团队协作时不可见 |
+| ③ 改本机 LAN 网段 | 家里/公司 LAN 改到 `192.168.88.0/24` 等不重叠段 | 改路由器 | 治本，冲突面直接消失；但只能解决本机，换机器还会遇到 |
 | ④ Jenkins 走域名 | 若公司能给出 Jenkins 域名，加 `DOMAIN,jenkins.xxx,内网` | 一条规则 | 已验证 fake-ip 路径可行（`git.sjgjj.cn` 就是例子），但探测 `jenkins.sjgjj.cn` / `ci.sjgjj.cn` 等常见名均不可达 |
 
 > 复现要点：改脚本后必须「重启/重连」才会重建配置；重启会丢连接状态且无自动重连，属已知行为。
+
+---
+
+## 十一、方案② 落地：路由守护（2026-10-20）
+
+### 11.1 手工验证（已通过）
+
+```bash
+sudo route -n add -host 192.168.0.168 -interface utun4
+nc -z -G 4 -w 3 192.168.0.168 8080 && echo open
+```
+
+结果：路由表出现 `192.168.0.168  utun4  UHS  utun4`，且排在 en0 的 `link#15 UHRLWI` 之前；`curl http://192.168.0.168:8080/` 返回 **200**（`Apache Tomcat/8.5.38` 页面）；`10.0.1.102` 仍 302、`git.sjgjj.cn` 仍 302、公网仍 200，无回归。
+
+说明：包进 utun 后 mihomo 能正确按 `IP-CIDR,192.168.0.168/32,内网,no-resolve` 丢给 `内网-aTrust`（`socks5 127.0.0.1:1080`）。规则层和出口层一直是好的，缺的只是这一条 OS 路由。
+
+### 11.2 守护脚本
+
+`scripts/bettbox-route-guard.sh` + `scripts/com.uni1k.bettbox-route-guard.plist`
+
+- **每 5 秒**跑一次（`StartInterval`），靠「接口地址落在 `198.18.0.1/15`」识别 TUN，不依赖 `utun` 编号，断线重连后自动跟上；
+- 只给白名单主机补 `/32`，**绝不触碰 `192.168.0.0/24` 的 connected 路由**，避免把本机局域网（路由器、NAS、打印机）一起劫持；
+- 已指向目标接口就跳过；需要改向时先 `route change` 再退回 `route add`；
+- 接口消失时清理指向它的残留路由，防止黑洞；
+- `HOSTS` 必须与 `Script/mihomoScript.js` 的 `intranet192Hosts` 一致，`Test/suites/integration.js` 有断言守护 —— 改一处漏另一处会直接测试失败。
+
+运行时行为：连上后通常只有 `192.168.0.168` 需要补（另外四个落在 `0/1`、`128/1` 里，本来就指向 utun），日志里会看到 `changes=+192.168.0.168`；其余时间 `changes=none`，不写盘。
+
+### 11.3 安装
+
+```bash
+cd /Users/yilinqu/Documents/workspace/personal/MyClash
+
+sudo install -m 755 scripts/bettbox-route-guard.sh /usr/local/bin/bettbox-route-guard.sh
+sudo install -m 644 scripts/com.uni1k.bettbox-route-guard.plist /Library/LaunchDaemons/com.uni1k.bettbox-route-guard.plist
+sudo launchctl bootout system /Library/LaunchDaemons/com.uni1k.bettbox-route-guard.plist 2>/dev/null
+sudo launchctl bootstrap system /Library/LaunchDaemons/com.uni1k.bettbox-route-guard.plist
+sudo launchctl kickstart -k system/com.uni1k.bettbox-route-guard
+```
+
+验证：
+
+```bash
+sudo cat /var/log/bettbox-route-guard.log                  # 期望看到 tun=utunN changes=...
+route -n get -host 192.168.0.168 | grep interface         # 期望 utunN
+nc -z -G 4 -w 3 192.168.0.168 8080 && echo open
+```
+
+### 11.4 卸载
+
+```bash
+sudo launchctl bootout system /Library/LaunchDaemons/com.uni1k.bettbox-route-guard.plist
+sudo rm -f /Library/LaunchDaemons/com.uni1k.bettbox-route-guard.plist /usr/local/bin/bettbox-route-guard.sh
+sudo rm -f /var/log/bettbox-route-guard.log /var/run/bettbox-route-guard.state
+```
+
+> 卸载后 Bettbox 再连接时，`192.168.0.168` 会回到 en0 的 ARP 主机路由，Jenkins 重新不可达 —— 这是回到修复前状态，不是新问题。
 
 ---
 
