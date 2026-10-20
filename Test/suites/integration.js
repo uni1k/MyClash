@@ -140,14 +140,48 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     });
   });
 
-  h.test('全量版 Jenkins IP 优先于私网直连规则，经 aTrust 内网代理访问', () => {
-    if (!meta.full) return;
+  h.test('内网主机规则先于私网/国内直连，且与 TUN 路由同源对齐', () => {
     const out = api.main(fx.minimalSubscription());
-    const rule = 'IP-CIDR,192.168.0.168/32,内网,no-resolve';
-    const ruleIndex = out.rules.indexOf(rule);
     const privateIndex = out.rules.indexOf('RULE-SET,private,直连');
-    h.assert(ruleIndex >= 0, '缺少 Jenkins IP 分流规则');
-    h.assert(privateIndex > ruleIndex, 'Jenkins IP 规则必须先于私网直连规则');
+    const cnIpIndex = out.rules.indexOf('RULE-SET,cn_ip,直连');
+    const privateIpIndex = out.rules.indexOf('RULE-SET,private_ip,直连');
+    h.assert(privateIndex >= 0 && cnIpIndex >= 0 && privateIpIndex >= 0, '缺少私网/国内兜底规则');
+
+    // 两条公网形态的内网 IP：必须早于 cn_ip 兜底，否则会被判直连（真正的顺序风险点）
+    for (const rule of ['IP-CIDR,113.125.201.130/31,内网,no-resolve', 'IP-CIDR,222.222.216.74/32,内网,no-resolve']) {
+      const i = out.rules.indexOf(rule);
+      h.assert(i >= 0, `缺少内网分流规则 ${rule}`);
+      h.assert(cnIpIndex > i, `${rule} 必须先于 cn_ip 兜底`);
+    }
+
+    // 192.168 内网主机：规则层与 TUN route-address 必须逐条同源，精简版同样要求
+    const hosts = [
+      '192.168.0.168/32',
+      '192.168.5.163/32',
+      '192.168.45.82/32',
+      '192.168.73.49/32',
+      '192.168.73.50/31',
+    ];
+    for (const cidr of hosts) {
+      const rule = `IP-CIDR,${cidr},内网,no-resolve`;
+      const i = out.rules.indexOf(rule);
+      h.assert(i >= 0, `缺少内网分流规则 ${rule}`);
+      h.assert(privateIndex > i, `${rule} 必须先于私网直连规则`);
+      h.assert(privateIpIndex > i, `${rule} 必须先于 private_ip 兜底`);
+      h.assert(
+        out.tun['route-address'].includes(cidr),
+        `TUN route-address 缺少 ${cidr}：与本地局域网同段时会被 connected route 抢走，规则形同虚设`,
+      );
+    }
+
+    // 10/8 与 192.168/16 属公司内网，不得出现在 TUN 排除清单
+    for (const cidr of ['10.0.0.0/8', '192.168.0.0/16']) {
+      h.assert(
+        !out.tun['route-exclude-address'].includes(cidr),
+        `TUN 不得排除 ${cidr}，否则内网流量根本进不了分流`,
+      );
+    }
+
     const intranet = groupByName(out['proxy-groups'], '内网');
     h.assert(intranet, '缺少内网策略组');
     h.assertEqual(intranet.proxies[0], '内网-aTrust');
@@ -156,10 +190,6 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     h.assertEqual(atrust.type, 'socks5');
     h.assertEqual(atrust.server, '127.0.0.1');
     h.assertEqual(atrust.port, 1080);
-    h.assert(
-      out.tun['route-address'].includes('192.168.0.168/32'),
-      'TUN 应显式引入 Jenkins IP（本机与其同网段，直连路由会抢先）',
-    );
   });
 
   // ---------------- GLOBAL 策略组 ----------------
