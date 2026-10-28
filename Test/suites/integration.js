@@ -459,21 +459,21 @@ function runIntegrationTests(h, api, meta, fx, loadScript, scriptFile) {
     h.assertEqual(out.hosts['services.googleapis.cn'], 'services.googleapis.com');
   });
 
-  h.test('DNS 引导解析使用 IP DoH，节点解析使用阿里 DoQ 与腾讯 DoH且不固定 DNSPod IP', () => {
+  h.test('DNS 引导解析与节点域名解析均使用 IP 字面量 DoH，且不固定 DNSPod IP', () => {
     const out = api.main(fx.typicalSubscription());
     h.assertDeep(out.dns['default-nameserver'], [
       'https://223.5.5.5/dns-query#DIRECT',
-      'https://223.6.6.6/dns-query#DIRECT',
+      'https://1.12.12.12/dns-query#DIRECT',
     ]);
     h.assertDeep(out.dns['proxy-server-nameserver'], [
-      'quic://dns.alidns.com:853#DIRECT',
-      'https://doh.pub/dns-query#DIRECT',
+      'https://223.6.6.6/dns-query#DIRECT',
+      'https://120.53.53.53/dns-query#DIRECT',
     ]);
     h.assert(!('doh.pub' in out.hosts), '应让 DNSPod 域名正常解析');
   });
-  h.test('国内与直连解析使用陕西移动 DNS 与阿里 DoQ，关闭 DNS IPv6并保留私有解析例外', () => {
+  h.test('国内与直连解析使用阿里与 DNSPod 的 IP DoH，关闭 DNS IPv6并保留私有解析例外', () => {
     const out = api.main(fx.typicalSubscription());
-    const domesticDNS = ['218.200.6.139#DIRECT', 'quic://dns.alidns.com:853#DIRECT'];
+    const domesticDNS = ['https://223.5.5.5/dns-query#DIRECT', 'https://1.12.12.12/dns-query#DIRECT'];
     h.assertDeep(out.dns['nameserver-policy']['rule-set:cn'], domesticDNS);
     h.assertDeep(out.dns['direct-nameserver'], domesticDNS);
     h.assertEqual(out.dns['direct-nameserver-follow-policy'], true);

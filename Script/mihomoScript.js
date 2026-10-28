@@ -1450,11 +1450,12 @@ function isCommonDns(dns) {
 }
 
 // 国内外 DNS 定义
-const chinaDNS = ['218.200.6.139#DIRECT', 'quic://dns.alidns.com:853#DIRECT'];
+// 上游一律使用 IP 字面量 DoH：fake-ip 模式下解析 DNS 服务自身的域名，唯一入口就是这些上游，
+// 域名一旦被分配 198.18.0.0/15 就连不通，形成无法自愈的死锁；每组分属两家厂商，避免单点。
+const chinaDNS = ['https://223.5.5.5/dns-query#DIRECT', 'https://1.12.12.12/dns-query#DIRECT'];
 const foreignDNS = ['https://cloudflare-dns.com/dns-query#默认代理', 'https://dns.google/dns-query#默认代理'];
-// 使用 IP DoH 加密引导查询，避免解析 DNS 服务域名时依赖明文 DNS；保留证书验证。
-const defaultDNS = ['https://223.5.5.5/dns-query#DIRECT', 'https://223.6.6.6/dns-query#DIRECT'];
-const proxyServerDNS = ['quic://dns.alidns.com:853#DIRECT', 'https://doh.pub/dns-query#DIRECT'];
+const defaultDNS = ['https://223.5.5.5/dns-query#DIRECT', 'https://1.12.12.12/dns-query#DIRECT'];
+const proxyServerDNS = ['https://223.6.6.6/dns-query#DIRECT', 'https://120.53.53.53/dns-query#DIRECT'];
 
 /**
  * hosts 匹配优先级：精确 > +. > . > *（同级按出现顺序）

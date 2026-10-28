@@ -63,7 +63,7 @@ npm --prefix Test install
   - 默认 hosts 映射、hosts 映射改写 server
   - 改写触发条件：`proxy-server-nameserver` 有且仅有一个条目且含 `listen`，或条目含 `127.0.0.1` 且 `listen` 含 `0.0.0.0`；未命中则跳过
 - 全量版 FCM 默认通过“默认代理”访问，同时保留手动直连选项
-- 国内及直连 DNS 使用陕西移动 `218.200.6.139#DIRECT` 与阿里 `quic://dns.alidns.com:853#DIRECT`、DNS IPv6 默认关闭、私有域名和抖音解析例外保留
+- 国内及直连 DNS 使用阿里与 DNSPod 的 IP 字面量 DoH（`https://223.5.5.5/dns-query`、`https://1.12.12.12/dns-query` 等）、DNS IPv6 默认关闭、私有域名和抖音解析例外保留
 - 倍率组与全量版负载均衡默认关闭，重新开启后能生成对应分组，默认策略组引用无悬空项
 - 配置选项开关（过滤高倍率 / 自动选择组 / 隐藏手动组 / 分流组添加所有节点 / QUIC 及 cn_additional 规则集 / 关闭分流组）
 - 自定义节点：未配置时不生成自定义节点组；配置后生成“自建节点”组、重名加“自建-”前缀、不参与 hosts 改写与 DNS 域名处理、默认代理/GLOBAL/手动选择包含自定义节点
